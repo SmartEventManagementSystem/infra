@@ -1,0 +1,48 @@
+# Event Service ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: event-service-config
+  namespace: event-service
+data:
+  config.yaml: |
+    app:
+      name: event-service
+      version: 1.0.0
+      port: 8080
+      environment: production
+
+    database:
+      host: ${DB_HOST}
+      port: 5432
+      user: ${DB_USER}
+      password: ${DB_PASSWORD}
+      name: ${DB_NAME}
+      max_connections: 100
+      connection_timeout: 30s
+
+    kafka:
+      brokers:
+        - ${KAFKA_BROKERS}
+      consumer_group: event-service-consumer
+      topics:
+        events: events.raw
+        notifications: notifications.raw
+        analytics: analytics.raw
+
+    redis:
+      host: ${REDIS_HOST}
+      port: 6379
+      db: 0
+      pool_size: 10
+
+    observability:
+      metrics_enabled: true
+      metrics_port: 9090
+      tracing_enabled: true
+      tracing_sample_rate: 0.1
+
+    rate_limit:
+      enabled: true
+      requests_per_second: 100
+      burst: 200

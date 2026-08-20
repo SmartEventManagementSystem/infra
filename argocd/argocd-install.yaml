@@ -1,0 +1,60 @@
+# ArgoCD Installation
+apiVersion: argoproj.io/v1alpha1
+kind: ArgoCD
+metadata:
+  name: argocd
+  namespace: argocd
+spec:
+  server:
+    replicas: 2
+    service:
+      type: ClusterIP
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+        nginx.ingress.kubernetes.io_force_ssl_redirect: "true"
+      hosts:
+        - argocd.local
+      tls:
+        - hosts:
+            - argocd.local
+          secretName: argocd-tls
+    route:
+      enabled: false
+  repo:
+    replicas: 2
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+  dex:
+    enabled: false
+  ha:
+    enabled: false
+  rbac:
+    policy_default: role:readonly
+    defaultPolicy: "role:readonly"
+    policy: |
+      g, system:master, admin
+      g, argocd-admins, admin
+      g, argocd-editors, edit
+      g, argocd-readonly, role:readonly
+    scopes: "[groups]"
+  redis:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+  applicationSet:
+    enabled: true
+    replicas: 2
+  notifications:
+    enabled: false
+  initialAdminPassword: "P@ssw0rd!EMS2024"

@@ -1,0 +1,49 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: argocd
+
+resources:
+  - github.com/argoproj-labs/argocd-extensions/namespace?ref=v2.0.0
+  - namespace.yaml
+  - argocd-install.yaml
+  - argocd-rbac.yaml
+
+patches:
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cm
+      data:
+        resource.customizations: |
+          argoproj.io/Application:
+            health.lua: |
+              hs = {}
+              hs.status = "Progressing"
+              hs.message = ""
+              if obj.status ~= nil then
+                if obj.status.health ~= nil then
+                  hs.status = obj.status.health.status
+                  if obj.status.health.message ~= nil then
+                    hs.message = obj.status.health.message
+                  end
+                end
+              end
+              return hs
+        ui.csslabel: |
+          app.kubernetes.io/name app.kubernetes.io/instance app.kubernetes.io/component
+        ui.bannercontent: |
+          🚀 EMS Event Management Platform - Development Environment
+
+patchesStrategicMerge:
+  - |
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: argocd-cm
+    data:
+      admin.enabled: "true"
+      statusbadge.enabled: "true"
+      help.chattext: |
+        EMS Support: slack #ems-support or email support@ems.local

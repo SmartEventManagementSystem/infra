@@ -1,0 +1,38 @@
+# ArgoCD ConfigMap - Application definitions
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-apps
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-apps
+data:
+  applications.yaml: |
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: event-service-platform
+      namespace: argocd
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/EMS-Project/event-service-platform.git
+        targetRevision: main
+        path: k8s/overlays/dev
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: event-service
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m

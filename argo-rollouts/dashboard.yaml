@@ -1,0 +1,45 @@
+# Argo Rollouts Dashboard (ClusterIP - access via kubectl port-forward)
+apiVersion: v1
+kind: Service
+metadata:
+  name: argo-rollouts-dashboard
+  namespace: argo-rollouts
+  labels:
+    app.kubernetes.io/name: argo-rollouts-dashboard
+spec:
+  ports:
+    - port: 3100
+      targetPort: 3100
+      name: dashboard
+  selector:
+    app.kubernetes.io/name: argo-rollouts
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argo-rollouts-dashboard
+  namespace: argo-rollouts
+  labels:
+    app.kubernetes.io/name: argo-rollouts-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argo-rollouts-dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: argo-rollouts-dashboard
+    spec:
+      containers:
+        - name: argo-rollouts-dashboard
+          image: quay.io/argoproj/argo-rollouts-dashboard:v1.8.2
+          ports:
+            - containerPort: 3100
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

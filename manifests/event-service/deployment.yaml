@@ -1,0 +1,173 @@
+# Event Service Deployment with Argo Rollouts (Canary Strategy)
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: event-service
+  namespace: event-service
+  labels:
+    app.kubernetes.io/name: event-service
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: event-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: event-service
+        app.kubernetes.io/version: v1.0.0
+    spec:
+      containers:
+        - name: event-service
+          image: ghcr.io/ems-project/event-service:v1.0.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+            - containerPort: 9090
+              name: metrics
+              protocol: TCP
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: event-service-secrets
+                  key: db-host
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: event-service-secrets
+                  key: db-user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: event-service-secrets
+                  key: db-password
+            - name: DB_NAME
+              value: "events"
+            - name: KAFKA_BROKERS
+              value: "kafka.dataplatform.svc.cluster.local:9092"
+            - name: REDIS_HOST
+              value: "redis.dataplatform.svc.cluster.local"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: ENVIRONMENT
+              value: "production"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 10"]
+  strategy:
+    canary:
+      canaryService: event-service-canary
+      stableService: event-service-stable
+      trafficRouting:
+        nginx:
+          stableIngress: event-service-stable
+          additionalIngressAnnotations:
+            canary-by-header: X-Canary
+      steps:
+        - setWeight: 5
+        - pause: {duration: 1m}
+        - analysis:
+            templates:
+              - templateName: event-service-analysis
+            args:
+              - name: service-name
+                value: event-service
+        - setWeight: 20
+        - pause: {duration: 2m}
+        - setWeight: 50
+        - pause: {duration: 2m}
+        - setWeight: 80
+        - pause: {duration: 1m}
+      analysis:
+        successfulRunHistoryLimit: 3
+        failedRunHistoryLimit: 3
+      maxSurge: "25%"
+      maxUnavailable: 0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: event-service-stable
+  namespace: event-service
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+      name: http
+  selector:
+    app.kubernetes.io/name: event-service
+    # Only stable replicas
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: event-service-canary
+  namespace: event-service
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+      name: http
+  selector:
+    app.kubernetes.io/name: event-service
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: event-service-stable
+  namespace: event-service
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    nginx.ingress.kubernetes.io/load-balance: "ip_hash"
+spec:
+  tls:
+    - hosts:
+        - api-events.ems.local
+      secretName: event-service-tls
+  rules:
+    - host: api-events.ems.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: event-service-stable
+                port:
+                  number: 80

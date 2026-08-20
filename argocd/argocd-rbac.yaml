@@ -1,0 +1,20 @@
+# ArgoCD RBAC Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-rbac
+data:
+  # policy.csv: |
+  #   g, argocd-admins, admin
+  #   g, argocd-editors, edit
+  #   g, argocd-users, read
+  #   p, role:developer, applications, create, events-service
+  #   p, role:developer, applications, update, events-service
+  #   g, developers, role:developer
+  #   g, platform-team, role:admin
+  #   g, data-team, role:readonly
+  policy.default: role:readonly
+  # scopes: "[groups]"

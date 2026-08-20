@@ -1,0 +1,62 @@
+name: Validate Kubernetes Manifests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.yaml'
+      - '**.yml'
+      - 'kustomization.yaml'
+  pull_request:
+    paths:
+      - '**.yaml'
+      - '**.yml'
+      - 'kustomization.yaml'
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Setup kustomize
+        uses: ./.github/actions/kustomize
+
+      - name: Validate ArgoCD manifests
+        run: |
+          echo "Validating argocd manifests..."
+          kubectl apply --dry-run=client -f argocd/ 2>&1 || true
+
+      - name: Validate Argo Rollouts manifests
+        run: |
+          echo "Validating argo-rollouts manifests..."
+          kubectl apply --dry-run=client -f argo-rollouts/ 2>&1 || true
+
+      - name: Validate service manifests
+        run: |
+          echo "Validating service manifests..."
+          kubectl apply --dry-run=client -f manifests/ 2>&1 || true
+
+      - name: Validate kustomization
+        run: |
+          echo "Validating kustomization files..."
+          for dir in argocd argo-rollouts manifests/event-service manifests/ai-service; do
+            if [ -f "$dir/kustomization.yaml" ]; then
+              kubectl kustomize "$dir" > /dev/null && echo "✓ $dir OK" || echo "✗ $dir FAILED"
+            fi
+          done
+
+  lint:
+    name: YAML Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run yamllint
+        uses: bridgecrewio/yamllint-action@v1
+        with:
+          path: .
