@@ -1,180 +1,154 @@
-# ============================================
-# EMS Platform - Full Production Stack
-# Deploy on Oracle Cloud VM
-# ============================================
+version: '3.8'
 
 services:
   # ============================================
-  # NGINX - Reverse Proxy
+  # Nginx Proxy Manager - Reverse Proxy + UI
   # ============================================
-  nginx:
-    image: nginx:alpine
-    container_name: ems-nginx
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: ems-nginx-proxy
     restart: always
     ports:
       - "80:80"
       - "443:443"
+      - "81:81"  # Admin UI
+    environment:
+      - DB_MYSQL_HOST=nginx-proxy-db
+      - DB_MYSQL_PORT=3306
+      - DB_MYSQL_NAME=npm
+      - DB_MYSQL_USER=npm
+      - DB_MYSQL_PASSWORD=${NPM_DB_PASSWORD:-npm_password}
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro
+      - ./data/nginx-proxy-manager:/data
+      - ./letsencrypt:/etc/letsencrypt
     depends_on:
-      - superset
-      - airflow-web
-      - kafka-ui
-      - minio
+      - nginx-proxy-db
     networks:
-      - dataplatform
+      - ems-network
+
+  nginx-proxy-db:
+    image: jc21/mariadb:latest
+    container_name: ems-nginx-proxy-db
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${NPM_ROOT_PASSWORD:-root_password}
+      - MYSQL_DATABASE=npm
+      - MYSQL_USER=npm
+      - MYSQL_PASSWORD=${NPM_DB_PASSWORD:-npm_password}
+    volumes:
+      - nginx_proxy_db:/var/lib/mysql
+    networks:
+      - ems-network
 
   # ============================================
-  # SUPERSET - BI Dashboard
+  # Web Client - React Frontend
   # ============================================
-  superset:
-    image: apache/superset:4.0.1
-    container_name: ems-superset
+  web-client:
+    image: ${REGISTRY}/web-client:${TAG:-latest}
+    container_name: ems-web-client
     restart: always
+    environment:
+      - NODE_ENV=production
+      - API_URL=${API_URL:-http://event-service:8080}
+    expose:
+      - "80"
+    networks:
+      - ems-network
+
+  # ============================================
+  # Event Service - Go Backend
+  # ============================================
+  event-service:
+    image: ${REGISTRY}/event-service:${TAG:-latest}
+    container_name: ems-event-service
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST:-redis}:6379/0
+      - KAFKA_BROKERS=${KAFKA_BROKERS:-kafka:29092}
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=8080
+      - GIN_MODE=release
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - ems-network
+
+  # ============================================
+  # AI Service - Go AI Backend
+  # ============================================
+  ai-service:
+    image: ${REGISTRY}/ai-service:${TAG:-latest}
+    container_name: ems-ai-service
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST:-redis}:6379/0
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PORT=8081
+      - GIN_MODE=release
+    expose:
+      - "8081"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - ems-network
+
+  # ============================================
+  # PostgreSQL - Database
+  # ============================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: ems-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
     ports:
-      - "8088:8088"
-    environment:
-      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-events:5432/${POSTGRES_DB}
+      - "5432:5432"
     volumes:
-      - superset_home:/app/pythonpath/superset_home
-    command: >
-      superset init &&
-      superset run --with-threads --reload
-    networks:
-      - dataplatform
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 30s
       timeout: 10s
       retries: 5
-
-  # ============================================
-  # AIRFLOW - ETL Scheduler
-  # ============================================
-  airflow-init:
-    image: apache/airflow:2.9.0-python3.11
-    container_name: ems-airflow-init
-    environment:
-      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow123@postgres-airflow:5432/airflow
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow123@postgres-airflow:5432/airflow
-      AIRFLOW__CELERY__BROKER_URL: redis://:@redis-airflow:6379/0
-      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    entrypoint: /entrypoint
     networks:
-      - dataplatform
+      - ems-network
 
-  airflow-web:
-    image: apache/airflow:2.9.0-python3.11
-    container_name: ems-airflow-web
+  # ============================================
+  # Redis - Cache
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: ems-redis
     restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
-      - "8085:8080"
-    environment:
-      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow123@postgres-airflow:5432/airflow
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow123@postgres-airflow:5432/airflow
-      AIRFLOW__CELERY__BROKER_URL: redis://:@redis-airflow:6379/0
-      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-events:5432/${POSTGRES_DB}
+      - "6379:6379"
     volumes:
-      - ./dags:/opt/airflow/dags:ro
-      - airflow_home:/opt/airflow
-    depends_on:
-      - postgres-airflow
-      - redis-airflow
-    command: webserver
-    networks:
-      - dataplatform
+      - redis_data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
-
-  airflow-scheduler:
-    image: apache/airflow:2.9.0-python3.11
-    container_name: ems-airflow-scheduler
-    restart: always
-    environment:
-      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow123@postgres-airflow:5432/airflow
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow123@postgres-airflow:5432/airflow
-      AIRFLOW__CELERY__BROKER_URL: redis://:@redis-airflow:6379/0
-      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-events:5432/${POSTGRES_DB}
-    volumes:
-      - ./dags:/opt/airflow/dags:ro
-      - airflow_home:/opt/airflow
-    depends_on:
-      - postgres-airflow
-      - redis-airflow
-    command: scheduler
     networks:
-      - dataplatform
-
-  airflow-worker:
-    image: apache/airflow:2.9.0-python3.11
-    container_name: ems-airflow-worker
-    restart: always
-    environment:
-      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow123@postgres-airflow:5432/airflow
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow123@postgres-airflow:5432/airflow
-      AIRFLOW__CELERY__BROKER_URL: redis://:@redis-airflow:6379/0
-      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    volumes:
-      - ./dags:/opt/airflow/dags:ro
-      - airflow_home:/opt/airflow
-    depends_on:
-      - postgres-airflow
-      - redis-airflow
-    command: celery worker
-    networks:
-      - dataplatform
-
-  airflow-triggerer:
-    image: apache/airflow:2.9.0-python3.11
-    container_name: ems-airflow-triggerer
-    restart: always
-    environment:
-      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow123@postgres-airflow:5432/airflow
-      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow123@postgres-airflow:5432/airflow
-      AIRFLOW__CELERY__BROKER_URL: redis://:@redis-airflow:6379/0
-      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
-    volumes:
-      - airflow_home:/opt/airflow
-    depends_on:
-      - postgres-airflow
-      - redis-airflow
-    command: triggerer
-    networks:
-      - dataplatform
+      - ems-network
 
   # ============================================
-  # KAFKA - Streaming
+  # Kafka - Message Broker (Optional)
   # ============================================
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.6.0
-    container_name: ems-zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    networks:
-      - dataplatform
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: ems-kafka
@@ -191,14 +165,27 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     depends_on:
       - zookeeper
-    networks:
-      - dataplatform
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 30s
       timeout: 10s
       retries: 5
+    networks:
+      - ems-network
 
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: ems-zookeeper
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - ems-network
+
+  # ============================================
+  # Kafka UI - Kafka Management
+  # ============================================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: ems-kafka-ui
@@ -211,225 +198,22 @@ services:
     depends_on:
       - kafka
     networks:
-      - dataplatform
-
-  # ============================================
-  # DATABASES
-  # ============================================
-  postgres-events:
-    image: postgres:15-alpine
-    container_name: ems-postgres-events
-    restart: always
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: emsuser
-      POSTGRES_PASSWORD: emspass123
-      POSTGRES_DB: ems_events
-    volumes:
-      - postgres_events_data:/var/lib/postgresql/data
-    networks:
-      - dataplatform
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U emsuser -d ems_events"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  postgres-airflow:
-    image: postgres:15-alpine
-    container_name: ems-postgres-airflow
-    restart: always
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow123
-      POSTGRES_DB: airflow
-    volumes:
-      - postgres_airflow_data:/var/lib/postgresql/data
-    networks:
-      - dataplatform
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U airflow"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  # ============================================
-  # REDIS
-  # ============================================
-  redis:
-    image: redis:7-alpine
-    container_name: ems-redis
-    restart: always
-    ports:
-      - "6379:6379"
-    command: redis-server --requirepass redispass123 --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
-    networks:
-      - dataplatform
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redispass123", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  redis-airflow:
-    image: redis:7-alpine
-    container_name: ems-redis-airflow
-    restart: always
-    command: redis-server --requirepass redispass123 --appendonly yes
-    volumes:
-      - redis_airflow_data:/data
-    networks:
-      - dataplatform
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redispass123", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  # ============================================
-  # MINIO - S3 Storage
-  # ============================================
-  minio:
-    image: minio/minio:latest
-    container_name: ems-minio
-    restart: always
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
-    volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
-    networks:
-      - dataplatform
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  mc:
-    image: minio/mc:latest
-    container_name: ems-mc
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      sleep 5 &&
-      mc alias set ems http://minio:9000 minioadmin ${MINIO_PASSWORD} &&
-      mc mb ems/warehouse --ignore-existing &&
-      mc mb ems/backups --ignore-existing &&
-      mc mb ems/datalake --ignore-existing &&
-      exit 0;
-      "
-    networks:
-      - dataplatform
-
-  # ============================================
-  # ELASTICSEARCH - Search
-  # ============================================
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
-    container_name: ems-elasticsearch
-    restart: always
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=true
-      - ELASTIC_PASSWORD=elastic123
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    networks:
-      - dataplatform
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s -u elastic:elastic123 http://localhost:9200 | grep -q 'cluster_name'"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  # ============================================
-  # QDRANT - Vector Search
-  # ============================================
-  qdrant:
-    image: qdrant/qdrant:v1.7.0
-    container_name: ems-qdrant
-    restart: always
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    volumes:
-      - qdrant_data:/qdrant/storage
-    networks:
-      - dataplatform
-
-  # ============================================
-  # FLINK - Stream Processing
-  # ============================================
-  flink-jobmanager:
-    image: flink:1.19.0
-    container_name: ems-flink-jobmanager
-    restart: always
-    ports:
-      - "8084:8081"
-    environment:
-      - |
-        FLINK_PROPERTIES=
-        jobmanager.rpc.address: flink-jobmanager
-        state.backend: rocksdb
-        state.checkpoints.dir: s3://warehouse/flink/checkpoints
-        execution.checkpointing.interval: 60000
-    volumes:
-      - flink_data:/opt/flink/data
-    depends_on:
-      - kafka
-    networks:
-      - dataplatform
-
-  flink-taskmanager:
-    image: flink:1.19.0
-    container_name: ems-flink-taskmanager1
-    restart: always
-    environment:
-      - |
-        FLINK_PROPERTIES=
-        jobmanager.rpc.address: flink-jobmanager
-        state.backend: rocksdb
-        taskmanager.numberOfTaskSlots: 4
-    volumes:
-      - flink_data:/opt/flink/data
-    depends_on:
-      - flink-jobmanager
-    command: taskmanager
-    networks:
-      - dataplatform
+      - ems-network
 
 # ============================================
-# VOLUMES
+# Volumes
 # ============================================
 volumes:
-  superset_home:
-  airflow_home:
-  postgres_events_data:
-  postgres_airflow_data:
+  postgres_data:
   redis_data:
-  redis_airflow_data:
-  minio_data:
-  elasticsearch_data:
-  qdrant_data:
-  flink_data:
+  nginx_proxy_db:
+  data:
+  letsencrypt:
 
 # ============================================
-# NETWORKS
+# Networks
 # ============================================
 networks:
-  dataplatform:
-    name: ems-dataplatform
+  ems-network:
+    name: ems-network
     driver: bridge
