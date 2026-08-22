@@ -1,0 +1,9 @@
+# GCP Configuration
+project_id = "ems-platform-xxx"
+region     = "asia-soutapore-1"
+
+# Database Password
+db_password = "your-secure-db-password"
+
+# Oracle VM IP (to whitelist for Cloud SQL access)
+oracle_vm_ip = "xxx.xxx.xxx.xxx"

@@ -1,0 +1,41 @@
+# ============================================
+# Terraform
+# ============================================
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform/
+.terraform.lock.hcl
+
+# Credentials
+*.tfvars
+!*.tfvars.example
+credentials.json
+*.pem
+*.key
+
+# Backup
+*.backup
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Local .env
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
