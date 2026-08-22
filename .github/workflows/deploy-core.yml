@@ -1,24 +1,39 @@
-name: Deploy to Production
+name: Build and Deploy
 
 on:
-  # Chỉ trigger khi có TAG (vd: v1.0.0, v1.2.3)
+  # ============================================
+  # BUILD: Mỗi khi push code lên main
+  # ============================================
+  push:
+    branches:
+      - main
+    paths:
+      - 'web-client/**'
+      - 'event-service-platform/**'
+      - 'ai-platform/**'
+
+  # ============================================
+  # DEPLOY: Chỉ khi có TAG (v*)
+  # ============================================
   push:
     tags:
       - 'v*'
-    branches:
-      - main
 
+  # ============================================
   # Manual trigger
+  # ============================================
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Environment'
+      action:
+        description: 'Action'
         required: true
-        default: 'production'
+        default: 'deploy'
         type: choice
         options:
-          - production
-          - staging
+          - deploy
+          - build-only
+          - restart
+          - logs
 
 env:
   REGISTRY: ghcr.io
@@ -26,11 +41,12 @@ env:
 
 jobs:
   # ============================================
-  # BUILD IMAGES
+  # BUILD IMAGES - Chạy khi push code
   # ============================================
   build:
-    name: 'Build & Push Images'
+    name: 'Build Images'
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.event.ref == 'refs/heads/main'
 
     outputs:
       tag: ${{ steps.vars.outputs.tag }}
@@ -43,10 +59,11 @@ jobs:
       - name: Set variables
         id: vars
         run: |
-          TAG=${GITHUB_REF#refs/tags/}
+          SHA_SHORT=$(echo $GITHUB_SHA | cut -c1-7)
+          TAG="sha-$SHA_SHORT"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "sha_short=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
-          echo "Image tag: $TAG"
+          echo "sha_short=$SHA_SHORT" >> $GITHUB_OUTPUT
+          echo "Build tag: $TAG"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -63,9 +80,10 @@ jobs:
       # ----------------------------------------
       - name: Build web-client
         if: github.event.inputs.web_client != 'false'
+        id: web-client
         run: |
           echo "Building web-client..."
-          # Check if Dockerfile exists, if not create one
+          # Create Dockerfile if not exists
           if [ ! -f web-client/Dockerfile ]; then
             cat > web-client/Dockerfile << 'EOF'
             FROM node:20-alpine AS builder
@@ -81,27 +99,22 @@ jobs:
             EXPOSE 80
             CMD ["nginx", "-g", "daemon off;"]
             EOF
+
             cat > web-client/nginx.conf << 'EOF'
             server {
                 listen 80;
                 server_name localhost;
                 root /usr/share/nginx/html;
                 index index.html;
-
                 location / {
                     try_files $uri $uri/ /index.html;
-                }
-
-                location /api/ {
-                    proxy_pass http://backend:8080/;
                 }
             }
             EOF
           fi
         working-directory: .
 
-      - name: Build and Push web-client
-        if: github.event.inputs.web_client != 'false'
+      - name: Push web-client
         uses: docker/build-push-action@v6
         with:
           context: ./web-client
@@ -111,11 +124,13 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/web-client:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+        continue-on-error: true
 
       # ----------------------------------------
-      # Build event-service (Go BE)
+      # Build event-service (Go)
       # ----------------------------------------
       - name: Build event-service
+        id: event-service
         uses: docker/build-push-action@v6
         with:
           context: ./event-service-platform
@@ -126,11 +141,13 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/event-service:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+        continue-on-error: true
 
       # ----------------------------------------
-      # Build ai-service (Go AI)
+      # Build ai-service (Go)
       # ----------------------------------------
       - name: Build ai-service
+        id: ai-service
         uses: docker/build-push-action@v6
         with:
           context: ./ai-platform
@@ -141,36 +158,41 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/ai-service:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+        continue-on-error: true
 
-      # ----------------------------------------
-      # Build ai-service (Go AI)
-      # ----------------------------------------
-      - name: Build data-platform
-        if: github.event.inputs.data_platform != 'false'
-        uses: docker/build-push-action@v6
-        with:
-          context: ./data-platform
-          file: ./data-platform/Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/data-platform:${{ steps.vars.outputs.tag }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/data-platform:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Discord Build Notification
+        if: always()
+        run: |
+          curl -X POST "${{ vars.DISCORD_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "content": "🔨 Build '${{ job.status }}'\nImage tag: `'${{ steps.vars.outputs.tag }}'`\nCommit: `'${{ github.sha }}'`"
+            }'
         continue-on-error: true
 
   # ============================================
-  # DEPLOY TO PRODUCTION
+  # DEPLOY - Chạy khi có TAG
   # ============================================
   deploy:
     name: 'Deploy to Production'
     runs-on: ubuntu-latest
     needs: build
+    if: startsWith(github.ref, 'refs/tags/')
     environment: production
+
+    outputs:
+      tag: ${{ steps.vars.outputs.tag }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set tag
+        id: vars
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Deploying with tag: $TAG"
 
       - name: Setup SSH
         run: |
@@ -178,17 +200,23 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-      - name: Deploy Core Services
+      - name: Deploy to VM
         run: |
-          VM_IP="${{ vars.VM_HOST || vars.PRODUCTION_VM_IP }}"
-          TAG="${{ needs.build.outputs.tag }}"
+          VM_IP="${{ vars.VM_HOST }}"
+          TAG="${{ needs.build.outputs.tag || steps.vars.outputs.tag }}"
 
           if [ -z "$VM_IP" ]; then
             echo "❌ VM_HOST not set!"
+            echo "Go to: GitHub → Settings → Variables → Actions → New variable"
+            echo "Name: VM_HOST"
+            echo "Value: your-vm-ip"
             exit 1
           fi
 
-          echo "Deploying to $VM_IP with tag $TAG"
+          echo "=========================================="
+          echo "  Deploying to: $VM_IP"
+          echo "  Image Tag: $TAG"
+          echo "=========================================="
 
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/deploy_key ubuntu@$VM_IP << "ENDSSH"
           set -e
@@ -197,14 +225,18 @@ jobs:
           # Login to GHCR
           echo '${{ secrets.GITHUB_TOKEN }}' | docker login ${{ env.REGISTRY }} -u '${{ github.actor }}' --password-stdin
 
-          # Create production docker-compose
+          # Pull latest images with TAG
+          echo "Pulling images with tag: $TAG"
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/web-client:$TAG || true
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/event-service:$TAG || true
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/ai-service:$TAG || true
+
+          # Create docker-compose.prod.yml
           cat > docker-compose.prod.yml << 'EOF'
           version: '3.8'
 
           services:
-            # ============================================
-            # Nginx - Reverse Proxy
-            # ============================================
+            # Nginx Reverse Proxy
             nginx:
               image: nginx:alpine
               container_name: ems-nginx
@@ -221,23 +253,17 @@ jobs:
               networks:
                 - ems-network
 
-            # ============================================
-            # Web Client - React Frontend
-            # ============================================
+            # Web Client
             web-client:
               image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/web-client:$TAG
               container_name: ems-web-client
               restart: always
               ports:
                 - "3000:80"
-              depends_on:
-                - event-service
               networks:
                 - ems-network
 
-            # ============================================
-            # Event Service - Go Backend
-            # ============================================
+            # Event Service
             event-service:
               image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/event-service:$TAG
               container_name: ems-event-service
@@ -251,19 +277,15 @@ jobs:
                 - GIN_MODE=release
               ports:
                 - "8080:8080"
-              depends_on:
-                - postgres
-              networks:
-                - ems-network
               healthcheck:
                 test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
                 interval: 30s
                 timeout: 10s
                 retries: 3
+              networks:
+                - ems-network
 
-            # ============================================
-            # AI Service - Go AI Backend
-            # ============================================
+            # AI Service
             ai-service:
               image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/ai-service:$TAG
               container_name: ems-ai-service
@@ -275,87 +297,39 @@ jobs:
                 - PORT=8081
               ports:
                 - "8081:8081"
-              depends_on:
-                - postgres
-              networks:
-                - ems-network
               healthcheck:
                 test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
                 interval: 30s
                 timeout: 10s
                 retries: 3
-
-            # ============================================
-            # PostgreSQL - Database
-            # ============================================
-            postgres:
-              image: postgres:15-alpine
-              container_name: ems-postgres
-              restart: always
-              environment:
-                - POSTGRES_USER=${{ secrets.DB_USER }}
-                - POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
-                - POSTGRES_DB=${{ secrets.DB_NAME }}
-              ports:
-                - "5432:5432"
-              volumes:
-                - postgres_data:/var/lib/postgresql/data
-              networks:
-                - ems-network
-              healthcheck:
-                test: ["CMD-SHELL", "pg_isready -U ${{ secrets.DB_USER }}"]
-                interval: 30s
-                timeout: 10s
-                retries: 5
-
-            # ============================================
-            # Redis - Cache
-            # ============================================
-            redis:
-              image: redis:7-alpine
-              container_name: ems-redis
-              restart: always
-              command: redis-server --requirepass ${{ secrets.REDIS_PASSWORD }} --appendonly yes
-              ports:
-                - "6379:6379"
-              volumes:
-                - redis_data:/data
               networks:
                 - ems-network
 
-          # ============================================
-          # Volumes
-          # ============================================
-          volumes:
-            postgres_data:
-            redis_data:
-
-          # ============================================
-          # Networks
-          # ============================================
           networks:
             ems-network:
               name: ems-network
               driver: bridge
           EOF
 
-          # Pull new images
+          # Pull and restart
           docker compose -f docker-compose.prod.yml pull
-
-          # Restart services
           docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
-          echo "✅ Deployment complete!"
+          echo ""
+          echo "=========================================="
+          echo "  ✅ Deployment Complete!"
+          echo "=========================================="
           ENDSSH
 
       - name: Health Check
         run: |
-          VM_IP="${{ vars.VM_HOST || vars.PRODUCTION_VM_IP }}"
+          VM_IP="${{ vars.VM_HOST }}"
           sleep 45
 
+          echo "Running health checks..."
           ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/deploy_key ubuntu@$VM_IP << "ENDSSH"
           echo "=== Container Status ==="
-          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          docker ps --format "table {{.Names}}\t{{.Status}}"
 
           echo ""
           echo "=== Health Checks ==="
@@ -365,22 +339,68 @@ jobs:
           curl -sf http://localhost:3000 && echo "✅ Web Client OK" || echo "❌ Web Client DOWN"
           ENDSSH
 
-      - name: Discord Success Notification
+      - name: Discord Success
         if: success()
         run: |
           curl -X POST "${{ vars.DISCORD_WEBHOOK }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "content": "✅ EMS Platform v'${{ needs.build.outputs.tag }}' deployed successfully!\nTag: `'${{ needs.build.outputs.tag }}'`\nCommit: `'${{ github.sha }}'`"
+              "content": "✅ EMS Platform v'${{ needs.deploy.outputs.tag }}' deployed!\nTag: `'${{ needs.deploy.outputs.tag }}'`\nCommit: `'${{ github.sha }}'`"
             }'
         continue-on-error: true
 
-      - name: Discord Failure Notification
+      - name: Discord Failure
         if: failure()
         run: |
           curl -X POST "${{ vars.DISCORD_WEBHOOK }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "content": "❌ EMS Platform deployment FAILED!\nTag: `'${{ needs.build.outputs.tag }}'`\nCommit: `'${{ github.sha }}'`"
+              "content": "❌ EMS Platform deployment FAILED!\nTag: `'${{ needs.deploy.outputs.tag }}'`\nCommit: `'${{ github.sha }}'`"
             }'
         continue-on-error: true
+
+  # ============================================
+  # MANUAL ACTIONS
+  # ============================================
+  manual:
+    name: 'Manual Actions'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+      - name: Restart Services
+        if: github.event.inputs.action == 'restart'
+        run: |
+          VM_IP="${{ vars.VM_HOST }}"
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/deploy_key ubuntu@$VM_IP << "ENDSSH"
+          cd /home/ubuntu/ems-platform
+          docker compose -f docker-compose.prod.yml restart
+          echo "✅ Services restarted"
+          ENDSSH
+
+      - name: View Logs
+        if: github.event.inputs.action == 'logs'
+        run: |
+          VM_IP="${{ vars.VM_HOST }}"
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/deploy_key ubuntu@$VM_IP << "ENDSSH"
+          cd /home/ubuntu/ems-platform
+          docker compose -f docker-compose.prod.yml logs --tail=50
+          ENDSSH
+
+      - name: Status Check
+        if: github.event.inputs.action == 'status'
+        run: |
+          VM_IP="${{ vars.VM_HOST }}"
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/deploy_key ubuntu@$VM_IP << "ENDSSH"
+          echo "=== EMS Platform Status ==="
+          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo ""
+          echo "=== Resource Usage ==="
+          docker stats --no-stream
+          ENDSSH
