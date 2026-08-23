@@ -44,12 +44,12 @@ services:
   # Web Client - React Frontend
   # ============================================
   web-client:
-    image: ${REGISTRY}/web-client:${TAG:-latest}
+    image: ems-web-client:latest
     container_name: ems-web-client
     restart: always
     environment:
       - NODE_ENV=production
-      - API_URL=${API_URL:-http://event-service:8080}
+      - API_URL=http://event-service:8080
     expose:
       - "80"
     networks:
@@ -59,7 +59,7 @@ services:
   # Event Service - Go Backend
   # ============================================
   event-service:
-    image: ${REGISTRY}/event-service:${TAG:-latest}
+    image: ems-event-service:latest
     container_name: ems-event-service
     restart: always
     environment:
@@ -73,7 +73,7 @@ services:
     expose:
       - "8080"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -84,7 +84,7 @@ services:
   # AI Service - Go AI Backend
   # ============================================
   ai-service:
-    image: ${REGISTRY}/ai-service:${TAG:-latest}
+    image: ems-ai-service:latest
     container_name: ems-ai-service
     restart: always
     environment:
@@ -96,7 +96,7 @@ services:
     expose:
       - "8081"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -147,7 +147,7 @@ services:
       - ems-network
 
   # ============================================
-  # Kafka - Message Broker (Optional)
+  # Kafka - Message Broker
   # ============================================
   kafka:
     image: confluentinc/cp-kafka:7.6.0
@@ -166,7 +166,7 @@ services:
     depends_on:
       - zookeeper
     healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
