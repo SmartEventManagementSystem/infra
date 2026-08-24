@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ============================================
   # Nginx Proxy Manager - Reverse Proxy + UI
@@ -44,7 +42,7 @@ services:
   # Web Client - React Frontend
   # ============================================
   web-client:
-    image: ems-web-client:latest
+    image: ghcr.io/smarteventmanagementsystem/web-client:latest
     container_name: ems-web-client
     restart: always
     environment:
@@ -59,7 +57,7 @@ services:
   # Event Service - Go Backend
   # ============================================
   event-service:
-    image: ems-event-service:latest
+    image: ghcr.io/smarteventmanagementsystem/event-service:latest
     container_name: ems-event-service
     restart: always
     environment:
@@ -84,7 +82,7 @@ services:
   # AI Service - Go AI Backend
   # ============================================
   ai-service:
-    image: ems-ai-service:latest
+    image: ghcr.io/smarteventmanagementsystem/ai-service:latest
     container_name: ems-ai-service
     restart: always
     environment:
