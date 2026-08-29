@@ -10,111 +10,63 @@ on:
       - 'argocd-prod/**'
     tags:
       - 'infra-*'
-
   pull_request:
     paths:
       - 'terraform/**'
       - '.github/workflows/terraform.yml'
-
   workflow_dispatch:
 
 env:
   TF_VERSION: '1.7.0'
 
 jobs:
-  # ============================================
-  # TERRAFORM PLAN (PR & Push)
-  # ============================================
   terraform-plan:
     name: 'Terraform Plan'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: true
-
-      # Oracle Cloud
-      - name: Oracle Cloud Setup
-        if: vars.OCI_TENANCY_OCID != ''
-        run: |
-          mkdir -p ~/.oci
-          echo "${{ secrets.OCI_PRIVATE_KEY }}" | base64 -d > ~/.oci/oci_key
-          chmod 600 ~/.oci/oci_key
-          cat > ~/.oci/config << 'EOF'
-          [DEFAULT]
-          user=${{ secrets.OCI_USER_OCID }}
-          fingerprint=${{ secrets.OCI_FINGERPRINT }}
-          tenancy=${{ secrets.OCI_TENANCY_OCID }}
-          region=${{ secrets.OCI_REGION }}
-          key_file=~/.oci/oci_key
-          EOF
-        env:
-          OCI_TENANCY_OCID: ${{ vars.OCI_TENANCY_OCID }}
-
-      # GCP
-      - name: GCP Setup (Workload Identity)
+      - name: GCP Setup
         if: vars.GCP_PROJECT_ID != ''
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-      # Plan Oracle
-      - name: Terraform Init (Oracle)
-        if: vars.OCI_TENANCY_OCID != ''
-        run: terraform init
-        working-directory: terraform/oracle
-
-      - name: Terraform Plan (Oracle)
-        if: vars.OCI_TENANCY_OCID != ''
-        id: plan-oracle
-        run: |
-          terraform plan -no-color -var-file="terraform.tfvars" -out=tfplan
-        working-directory: terraform/oracle
-        continue-on-error: true
-
-      # Plan GCP
-      - name: Terraform Init (GCP)
+      - name: Terraform Init
         if: vars.GCP_PROJECT_ID != ''
         run: terraform init
         working-directory: terraform/gcp
-
-      - name: Terraform Plan (GCP)
+      - name: Terraform Plan
         if: vars.GCP_PROJECT_ID != ''
         id: plan-gcp
         run: |
-          cat > terraform/gcp/terraform.tfvars << 'TFVARS'
-project_id = "${{ vars.GCP_PROJECT_ID }}"
-region     = "asia-southeast1"
-environment = "prod"
-db_password = "plan-placeholder"
-db_user     = "emsuser"
-db_name     = "ems_events"
-redis_password = "plan-placeholder"
-vpc_cidr = "10.10.0.0/20"
-pod_cidr = "10.20.0.0/16"
-svc_cidr = "10.30.0.0/20"
-allowed_cidrs = ["0.0.0.0/0"]
-system_node_machine_type = "e2-micro"
-app_node_machine_type    = "e2-micro"
-data_node_machine_type   = "e2-micro"
-TFVARS
+          printf 'project_id = "%s"\nregion = "%s"\nenvironment = "%s"\ndb_password = "%s"\ndb_user = "%s"\ndb_name = "%s"\nredis_password = "%s"\nvpc_cidr = "%s"\npod_cidr = "%s"\nsvc_cidr = "%s"\nallowed_cidrs = %s\nsystem_node_machine_type = "%s"\napp_node_machine_type = "%s"\ndata_node_machine_type = "%s"\n' \
+            '${{ vars.GCP_PROJECT_ID }}' \
+            'asia-southeast1' \
+            'prod' \
+            'placeholder' \
+            'emsuser' \
+            'ems_events' \
+            'placeholder' \
+            '10.10.0.0/20' \
+            '10.20.0.0/16' \
+            '10.30.0.0/20' \
+            '["0.0.0.0/0"]' \
+            'e2-micro' \
+            'e2-micro' \
+            'e2-micro' > terraform/gcp/terraform.tfvars
+          cat terraform/gcp/terraform.tfvars
           terraform plan -no-color -var-file="terraform.tfvars" -out=tfplan
         working-directory: terraform/gcp
-        continue-on-error: true
 
-  # ============================================
-  # TERRAFORM APPLY (Only on Tag Push)
-  # ============================================
   terraform-apply:
     name: 'Terraform Apply'
     runs-on: ubuntu-latest
@@ -123,75 +75,44 @@ TFVARS
     permissions:
       contents: read
       id-token: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: true
-
-      # Oracle Cloud
-      - name: Oracle Cloud Setup
-        if: vars.OCI_TENANCY_OCID != ''
-        run: |
-          mkdir -p ~/.oci
-          echo "${{ secrets.OCI_PRIVATE_KEY }}" | base64 -d > ~/.oci/oci_key
-          chmod 600 ~/.oci/oci_key
-          cat > ~/.oci/config << 'EOF'
-          [DEFAULT]
-          user=${{ secrets.OCI_USER_OCID }}
-          fingerprint=${{ secrets.OCI_FINGERPRINT }}
-          tenancy=${{ secrets.OCI_TENANCY_OCID }}
-          region=${{ secrets.OCI_REGION }}
-          key_file=~/.oci/oci_key
-          EOF
-
-      - name: Terraform Apply (Oracle)
-        if: vars.OCI_TENANCY_OCID != ''
-        run: |
-          terraform init
-          terraform apply -var-file="terraform.tfvars" -auto-approve
-        working-directory: terraform/oracle
-
-      # GCP
-      - name: GCP Setup (Workload Identity)
+      - name: GCP Setup
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-      - name: Terraform Apply (GCP)
+      - name: Terraform Apply
         run: |
-          cat > terraform/gcp/terraform.tfvars << 'TFVARS'
-project_id = "${{ vars.GCP_PROJECT_ID }}"
-region     = "asia-southeast1"
-environment = "prod"
-db_password = "${{ secrets.GCP_DB_PASSWORD }}"
-db_user     = "emsuser"
-db_name     = "ems_events"
-redis_password = "${{ secrets.GCP_REDIS_PASSWORD }}"
-vpc_cidr = "10.10.0.0/20"
-pod_cidr = "10.20.0.0/16"
-svc_cidr = "10.30.0.0/20"
-allowed_cidrs = ["0.0.0.0/0"]
-system_node_machine_type = "e2-micro"
-app_node_machine_type    = "e2-micro"
-data_node_machine_type   = "e2-micro"
-TFVARS
+          printf 'project_id = "%s"\nregion = "%s"\nenvironment = "%s"\ndb_password = "%s"\ndb_user = "%s"\ndb_name = "%s"\nredis_password = "%s"\nvpc_cidr = "%s"\npod_cidr = "%s"\nsvc_cidr = "%s"\nallowed_cidrs = %s\nsystem_node_machine_type = "%s"\napp_node_machine_type = "%s"\ndata_node_machine_type = "%s"\n' \
+            '${{ vars.GCP_PROJECT_ID }}' \
+            'asia-southeast1' \
+            'prod' \
+            '${{ secrets.GCP_DB_PASSWORD }}' \
+            'emsuser' \
+            'ems_events' \
+            '${{ secrets.GCP_REDIS_PASSWORD }}' \
+            '10.10.0.0/20' \
+            '10.20.0.0/16' \
+            '10.30.0.0/20' \
+            '["0.0.0.0/0"]' \
+            'e2-micro' \
+            'e2-micro' \
+            'e2-micro' > terraform/gcp/terraform.tfvars
+          cat terraform/gcp/terraform.tfvars
           terraform init
           terraform apply -var-file="terraform.tfvars" -auto-approve
         working-directory: terraform/gcp
-
       - name: Discord Notification
         if: always()
         run: |
           curl -X POST "${{ vars.DISCORD_WEBHOOK }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "content": "🏗️ Infrastructure ${{ job.status }}!\nTag: `'${{ github.ref_name }}'`"
-            }'
+            -d '{"content": "Infrastructure ''''${{ job.status }}''''!\nTag: `'"'"'${{ github.ref_name }}'"'"'`"}'
         continue-on-error: true
