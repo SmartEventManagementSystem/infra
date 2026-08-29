@@ -59,7 +59,7 @@ jobs:
             'e2-micro' \
             'e2-micro' \
             'e2-micro' > terraform.tfvars
-          cd terraform/gcp && terraform init && terraform plan -var-file="../terraform.tfvars" -no-color -out=tfplan
+          cd terraform/gcp && terraform init && terraform plan -var-file="../../terraform.tfvars" -no-color -out=tfplan
 
   terraform-apply:
     name: 'Terraform Apply'
@@ -99,7 +99,7 @@ jobs:
             'e2-micro' \
             'e2-micro' \
             'e2-micro' > terraform.tfvars
-          cd terraform/gcp && terraform init && terraform apply -var-file="../terraform.tfvars" -auto-approve
+          cd terraform/gcp && terraform init && terraform apply -var-file="../../terraform.tfvars" -auto-approve
       - name: Discord Notification
         if: always()
         run: |
