@@ -40,10 +40,6 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-      - name: Terraform Init
-        if: vars.GCP_PROJECT_ID != ''
-        run: terraform init
-        working-directory: terraform/gcp
       - name: Terraform Plan
         if: vars.GCP_PROJECT_ID != ''
         id: plan-gcp
@@ -63,8 +59,7 @@ jobs:
             'e2-micro' \
             'e2-micro' \
             'e2-micro' > terraform.tfvars
-          terraform init
-          terraform plan -no-color -var-file="terraform.tfvars" -out=tfplan
+          cd terraform/gcp && terraform init && terraform plan -var-file="../terraform.tfvars" -no-color -out=tfplan
 
   terraform-apply:
     name: 'Terraform Apply'
@@ -104,8 +99,7 @@ jobs:
             'e2-micro' \
             'e2-micro' \
             'e2-micro' > terraform.tfvars
-          terraform init
-          terraform apply -var-file="terraform.tfvars" -auto-approve
+          cd terraform/gcp && terraform init && terraform apply -var-file="../terraform.tfvars" -auto-approve
       - name: Discord Notification
         if: always()
         run: |
