@@ -470,7 +470,7 @@ resource "google_sql_user" "ems_user" {
 # ============================================================
 resource "google_redis_instance" "ems_redis" {
   name              = "ems-redis"
-  memory_size_gb    = 2
+  memory_size_gb    = 2  # Redis instance size
   redis_version     = "REDIS_7_0"
   region           = var.region
   tier             = "STANDARD_HA"
