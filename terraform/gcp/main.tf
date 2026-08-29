@@ -110,8 +110,6 @@ resource "google_redis_instance" "ems_redis" {
 
   tier = "BASIC"
 
-  connectivity_mode = "PRIVATE_SERVICE_CONNECT_IP_MODE"
-
   maintenance_policy {
     description = "Auto-upgrade Redis during maintenance window"
     weekly_maintenance_window {
