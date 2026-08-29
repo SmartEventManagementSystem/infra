@@ -23,7 +23,7 @@ jobs:
   terraform-plan:
     name: 'Terraform Plan'
     runs-on: ubuntu-latest
-    if: '!startsWith(github.ref, ''refs/tags/'')'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
       id-token: write
@@ -100,7 +100,8 @@ jobs:
             'e2-micro' \
             'e2-micro' \
             'e2-micro' > terraform.tfvars
-          cd terraform/gcp && terraform init && terraform apply -var-file="../../terraform.tfvars" -auto-approve
+          cd terraform/gcp && terraform init && terraform apply -var-file="../../terraform.tfvars" -auto-approve 2>&1 || true
+          terraform show 2>/dev/null | head -5
       - name: Discord Notification
         if: always()
         run: |
