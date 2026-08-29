@@ -120,6 +120,7 @@ jobs:
 
       # Oracle Cloud
       - name: Oracle Cloud Setup
+        if: vars.OCI_TENANCY_OCID != ''
         run: |
           mkdir -p ~/.oci
           echo "${{ secrets.OCI_PRIVATE_KEY }}" | base64 -d > ~/.oci/oci_key
@@ -134,6 +135,7 @@ jobs:
           EOF
 
       - name: Terraform Apply (Oracle)
+        if: vars.OCI_TENANCY_OCID != ''
         run: |
           terraform init
           terraform apply -var-file="terraform.tfvars" -auto-approve
