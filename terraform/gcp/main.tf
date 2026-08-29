@@ -106,13 +106,11 @@ resource "google_redis_instance" "ems_redis" {
   memory_size_gb = 1
   redis_version  = "REDIS_7_0"
   region         = var.region
-  location_id    = "${var.region}-a"
+  location_id    = "${var.region}-a"  # deprecated but still required
 
   tier = "BASIC"
 
-  connectivity {
-    ip_mode = "PRIVATE_SERVICE_CONNECT_IP_MODE"
-  }
+  connectivity_mode = "PRIVATE_SERVICE_CONNECT_IP_MODE"
 
   maintenance_policy {
     description = "Auto-upgrade Redis during maintenance window"
