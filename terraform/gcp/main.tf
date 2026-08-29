@@ -61,11 +61,9 @@ resource "google_sql_database_instance" "ems_postgres" {
 
     ip_configuration {
       ipv4_enabled    = true
-      private_network = null
-
       authorized_networks {
-        name  = "oracle-vm"
-        value = var.oracle_vm_ip  # Allow Oracle VM to connect
+        name  = "all"
+        value = "0.0.0.0/0"
       }
     }
 
@@ -134,6 +132,7 @@ resource "google_storage_bucket" "ems_backups" {
   name          = "${var.project_id}-ems-backups"
   location      = var.region
   storage_class = "STANDARD"
+  force_destroy = true
 
   uniform_bucket_level_access = true
 
@@ -155,6 +154,7 @@ resource "google_storage_bucket" "ems_datalake" {
   name          = "${var.project_id}-ems-datalake"
   location      = var.region
   storage_class = "NEARLINE"
+  force_destroy = true
 
   uniform_bucket_level_access = true
 
