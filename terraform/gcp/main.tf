@@ -7,12 +7,6 @@ terraform {
       version = "~> 5.0"
     }
   }
-
-  backend "gcs" {
-    bucket = "project-5ca79767-316d-4e68-a56-ems-terraform-state"
-    prefix = "gcp"
-    project = "project-5ca79767-316d-4e68-a56"
-  }
 }
 
 provider "google" {
