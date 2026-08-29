@@ -476,9 +476,7 @@ resource "google_redis_instance" "ems_redis" {
   tier             = "STANDARD_HA"
   display_name     = "EMS Redis"
 
-  connectivity {
-    ip_mode = "PRIVATE_SERVICE_ACCESS"
-  }
+  connectivity_mode = "PRIVATE_SERVICE_ACCESS"
 
   maintenance_policy {
     weekly_maintenance_window {

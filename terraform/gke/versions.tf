@@ -11,11 +11,6 @@ terraform {
       version = "~> 5.0"
     }
   }
-
-  backend "gcs" {
-    bucket = "ems-terraform-state"
-    prefix = "gke"
-  }
 }
 
 provider "google" {
