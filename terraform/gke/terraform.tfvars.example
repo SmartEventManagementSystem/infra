@@ -1,0 +1,27 @@
+# GCP Project Configuration
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+
+# Environment
+environment = "prod"
+
+# PostgreSQL Configuration
+db_password = "your-secure-db-password"
+db_user     = "emsuser"
+db_name     = "ems_events"
+
+# Redis Configuration
+redis_password = "your-redis-password"
+
+# Network Configuration
+vpc_cidr = "10.10.0.0/20"
+pod_cidr = "10.20.0.0/16"
+svc_cidr = "10.30.0.0/20"
+
+# Access Control
+allowed_cidrs = ["0.0.0.0/0"] # Restrict to your IP in production
+
+# Node Pool Machine Types
+system_node_machine_type = "g1-standard-2"
+app_node_machine_type    = "n2-standard-4"
+data_node_machine_type   = "n2-standard-8"

@@ -1,5 +1,38 @@
 services:
   # ============================================
+  # Database Migration Service
+  # ============================================
+  migration:
+    image: postgres:15-alpine
+    container_name: ems-migration
+    restart: "no"
+    environment:
+      - PGPASSWORD=${DB_PASSWORD}
+    volumes:
+      - ../config/sql:/docker-entrypoint-initdb.d:ro
+      - migration_done:/migration_state
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        echo "Waiting for postgres to be ready..."
+        until pg_isready -h postgres -U ${DB_USER} -d ${DB_NAME} 2>/dev/null; do sleep 2; done
+        echo "Running migrations..."
+        for f in /docker-entrypoint-initdb.d/*.sql; do
+          if [ -f "$f" ]; then
+            echo "Executing: $f"
+            psql -h postgres -U ${DB_USER} -d ${DB_NAME} -f "$f" 2>/dev/null || true
+          fi
+        done
+        echo "Migrations complete"
+        touch /migration_state/done
+        echo "done" > /migration_state/done
+    networks:
+      - ems-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ============================================
   # Nginx Proxy Manager - Reverse Proxy + UI
   # ============================================
   nginx-proxy-manager:
@@ -61,13 +94,9 @@ services:
     container_name: ems-event-service
     restart: always
     environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@${REDIS_HOST:-redis}:6379/0
-      - KAFKA_BROKERS=${KAFKA_BROKERS:-kafka:29092}
-      - JWT_SECRET=${JWT_SECRET}
-      - PORT=8080
-      - GIN_MODE=release
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - APP_MODE=local
+    volumes:
+      - ../config/config-local.yaml:/app/config/config-local.yaml:ro
     expose:
       - "8080"
     healthcheck:
@@ -77,6 +106,9 @@ services:
       retries: 3
     networks:
       - ems-network
+    depends_on:
+      migration:
+        condition: service_completed_successfully
 
   # ============================================
   # AI Service - Go AI Backend
@@ -207,6 +239,7 @@ volumes:
   nginx_proxy_db:
   data:
   letsencrypt:
+  migration_done:
 
 # ============================================
 # Networks

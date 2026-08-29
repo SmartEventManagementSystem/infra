@@ -1,0 +1,43 @@
+# ExternalName services pointing to Cloud SQL and Memorystore
+# These resolve via GCP Private Service Connect
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: dataplatform
+spec:
+  type: ExternalName
+  externalName: ${POSTGRES_PRIVATE_IP}
+  ports:
+    - port: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: dataplatform
+spec:
+  type: ExternalName
+  externalName: ${REDIS_HOST}
+  ports:
+    - port: 6379
+---
+# Kafka headless service (for StatefulSet discovery)
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-headless
+  namespace: dataplatform
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: plaintext
+      port: 9092
+      targetPort: 9092
+    - name: external
+      port: 9094
+      targetPort: 9094
+  selector:
+    app: kafka

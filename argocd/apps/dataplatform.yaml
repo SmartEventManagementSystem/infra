@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dataplatform
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: ems-platform
+  annotations:
+    argocd.argoproj.io/watch: "true"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/smarteventmanagementsystem/infra.git
+    targetRevision: main
+    path: manifests/dataplatform/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dataplatform
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3

@@ -1,0 +1,45 @@
+# NGINX Ingress Controller LoadBalancer Service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-nginx-controller
+  namespace: ingress-nginx
+  annotations:
+    networking.gke.io/load-balancer-type: "Internal"
+    cloud.google.com/backend-config: '{"default": "ems-backend-config"}'
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/component: controller
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: https
+      protocol: TCP
+  selector:
+    app: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/component: controller
+---
+# Backend Config for GCP LoadBalancer health checks
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: ems-backend-config
+  namespace: ingress-nginx
+spec:
+  healthCheck:
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 2
+    unhealthyThreshold: 3
+    type: HTTP
+    requestPath: /healthz
+    port: 10254

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dataplatform
+  labels:
+    app.kubernetes.io/name: dataplatform
+    app.kubernetes.io/part-of: ems-platform
