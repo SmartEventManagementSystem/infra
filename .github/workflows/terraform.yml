@@ -62,10 +62,9 @@ jobs:
             '["0.0.0.0/0"]' \
             'e2-micro' \
             'e2-micro' \
-            'e2-micro' > terraform/gcp/terraform.tfvars
-          cat terraform/gcp/terraform.tfvars
+            'e2-micro' > terraform.tfvars
+          terraform init
           terraform plan -no-color -var-file="terraform.tfvars" -out=tfplan
-        working-directory: terraform/gcp
 
   terraform-apply:
     name: 'Terraform Apply'
@@ -104,11 +103,9 @@ jobs:
             '["0.0.0.0/0"]' \
             'e2-micro' \
             'e2-micro' \
-            'e2-micro' > terraform/gcp/terraform.tfvars
-          cat terraform/gcp/terraform.tfvars
+            'e2-micro' > terraform.tfvars
           terraform init
           terraform apply -var-file="terraform.tfvars" -auto-approve
-        working-directory: terraform/gcp
       - name: Discord Notification
         if: always()
         run: |
