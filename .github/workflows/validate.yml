@@ -56,7 +56,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install yamllint
+        run: pip install yamllint
+
       - name: Run yamllint
-        uses: bridgecrewio/yamllint-action@v1
-        with:
-          path: .
+        run: yamllint .

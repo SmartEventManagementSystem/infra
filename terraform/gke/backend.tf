@@ -4,7 +4,8 @@
 
 terraform {
   backend "gcs" {
-    bucket = "ems-terraform-state" # Replace with your actual bucket name
-    prefix = "gke"
+    bucket  = "project-5ca79767-316d-4e68-a56-ems-terraform-state"
+    prefix  = "gke"
+    project = "project-5ca79767-316d-4e68-a56"
   }
 }

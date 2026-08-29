@@ -56,11 +56,12 @@ jobs:
           OCI_TENANCY_OCID: ${{ vars.OCI_TENANCY_OCID }}
 
       # GCP
-      - name: GCP Setup
+      - name: GCP Setup (Workload Identity)
         if: vars.GCP_PROJECT_ID != ''
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       # Plan Oracle
       - name: Terraform Init (Oracle)
@@ -131,10 +132,11 @@ jobs:
         working-directory: terraform/oracle
 
       # GCP
-      - name: GCP Setup
+      - name: GCP Setup (Workload Identity)
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Terraform Apply (GCP)
         run: |

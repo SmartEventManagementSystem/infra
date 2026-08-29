@@ -1,0 +1,11 @@
+name: Setup kustomize
+description: Install kustomize for Kubernetes manifest rendering
+runs:
+  using: composite
+  steps:
+    - name: Install kustomize
+      shell: bash
+      run: |
+        set -e
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        sudo mv kustomize /usr/local/bin/
