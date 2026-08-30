@@ -1,4 +1,4 @@
-name: Validate Kubernetes Manifests
+name: Validate Kubernetes Manifests V2
 
 on:
   push:
