@@ -94,8 +94,8 @@ resource "google_compute_router_nat" "ems_nat" {
 
   min_ports_per_vm = 128
 
-  enable_logging = true
   log_config {
+    enable_logging = true
     filter = "ERRORS_ONLY"
   }
 }
@@ -162,7 +162,6 @@ resource "google_container_cluster" "ems_cluster" {
   networking_mode = "VPC_NATIVE"
 
   master_authorized_networks_config {
-    gke_public_endpoint = true
     cidr_blocks {
       cidr_block   = "0.0.0.0/0"
       display_name = "Allow all"
@@ -175,11 +174,6 @@ resource "google_container_cluster" "ems_cluster" {
 
   vertical_pod_autoscaling {
     enabled = true
-  }
-
-  network_policy {
-    enabled  = true
-    provider = "CALICO"
   }
 
   maintenance_policy {
@@ -202,9 +196,6 @@ resource "google_container_cluster" "ems_cluster" {
       maximum       = 200
     }
   }
-
-  node_pool_auto_repair  = true
-  node_pool_auto_upgrade = true
 
   release_channel {
     channel = "REGULAR"
@@ -418,8 +409,6 @@ resource "google_redis_instance" "ems_redis" {
   region           = var.region
   tier             = "BASIC"
   display_name     = "ems-redis"
-
-  connectivity_mode = "PRIVATE_SERVICE_ACCESS"
 
   maintenance_policy {
     weekly_maintenance_window {
