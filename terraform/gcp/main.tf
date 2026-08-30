@@ -267,7 +267,7 @@ resource "google_container_node_pool" "system_pool" {
   }
 
   lifecycle {
-    ignore_changes = [node_count]
+    ignore_changes = all
   }
 }
 
@@ -313,6 +313,10 @@ resource "google_container_node_pool" "app_pool" {
     max_surge       = 2
     max_unavailable = 1
   }
+
+  lifecycle {
+    ignore_changes = all
+  }
 }
 
 # Data Node Pool (Kafka)
@@ -353,6 +357,10 @@ resource "google_container_node_pool" "data_pool" {
   management {
     auto_repair  = true
     auto_upgrade = true
+  }
+
+  lifecycle {
+    ignore_changes = all
   }
 }
 
