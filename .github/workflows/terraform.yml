@@ -85,7 +85,7 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
       - name: Terraform Apply
         run: |
-          printf 'project_id = "%s"\nregion = "%s"\nenvironment = "%s"\ndb_password = "%s"\ndb_user = "%s"\ndb_name = "%s"\nredis_password = "%s"\nvpc_cidr = "%s"\npod_cidr = "%s"\nsvc_cidr = "%s"\nallowed_cidrs = %s\nsystem_node_machine_type = "%s"\napp_node_machine_type = "%s"\ndata_node_machine_type = "%s"\n' \
+          printf 'project_id = "%s"\nregion = "%s"\nenvironment = "%s"\ndb_password = "%s"\ndb_user = "%s"\ndb_name = "%s"\nredis_password = "%s"\nvpc_cidr = "%s"\npod_cidr = "%s"\nsvc_cidr = "%s"\nallowed_cidrs = %s\nsystem_node_machine_type = "%s"\napp_node_machine_type = "%s"\ndata_node_machine_type = "%s"\ngcp_service_account_email = "%s"\n' \
             '${{ vars.GCP_PROJECT_ID }}' \
             'asia-southeast1' \
             'prod' \
@@ -99,8 +99,20 @@ jobs:
             '["0.0.0.0/0"]' \
             'e2-micro' \
             'e2-micro' \
-            'e2-micro' > terraform.tfvars
-          cd terraform/gcp && terraform init && terraform apply -var-file="../../terraform.tfvars" -auto-approve 2>&1
+            'e2-micro' \
+            '${{ vars.GCP_SERVICE_ACCOUNT_EMAIL }}' > terraform.tfvars
+          cd terraform/gcp && terraform init
+
+          # Import existing resources into state
+          terraform import -var-file="../../terraform.tfvars" google_compute_network.ems_vpc projects/project-5ca79767-316d-4e68-a56/global/networks/ems-vpc 2>/dev/null || true
+          terraform import -var-file="../../terraform.tfvars" google_compute_subnetwork.ems_nodes projects/project-5ca79767-316d-4e68-a56/regions/asia-southeast1/subnetworks/ems-nodes 2>/dev/null || true
+          terraform import -var-file="../../terraform.tfvars" google_service_account.gke_nodes projects/project-5ca79767-316d-4e68-a56/serviceAccounts/ems-gke-nodes@project-5ca79767-316d-4e68-a56.iam.gserviceaccount.com 2>/dev/null || true
+          terraform import -var-file="../../terraform.tfvars" google_container_cluster.ems_cluster projects/project-5ca79767-316d-4e68-a56/locations/asia-southeast1/clusters/ems-cluster 2>/dev/null || true
+          terraform import -var-file="../../terraform.tfvars" google_container_node_pool.system_pool projects/project-5ca79767-316d-4e68-a56/locations/asia-southeast1/clusters/ems-cluster/nodePools/system-pool 2>/dev/null || true
+          terraform import -var-file="../../terraform.tfvars" google_container_node_pool.app_pool projects/project-5ca79767-316d-4e68-a56/locations/asia-southeast1/clusters/ems-cluster/nodePools/app-pool 2>/dev/null || true
+          terraform import -var-file="../../terraform.tfvars" google_container_node_pool.data_pool projects/project-5ca79767-316d-4e68-a56/locations/asia-southeast1/clusters/ems-cluster/nodePools/data-pool 2>/dev/null || true
+
+          terraform apply -var-file="../../terraform.tfvars" -auto-approve 2>&1
           terraform show 2>/dev/null | head -5
       - name: Discord Notification
         if: always()
