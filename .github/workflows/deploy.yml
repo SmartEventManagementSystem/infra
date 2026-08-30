@@ -41,6 +41,7 @@ jobs:
         run: |
           kubectl apply -f manifests/networking/cert-manager/namespace.yaml
           kubectl apply -f manifests/networking/cert-manager/cert-manager.yaml
+          kubectl wait --for=condition=Established -f manifests/networking/cert-manager/cert-manager.yaml --timeout=120s
           kubectl apply -f manifests/networking/cert-manager/issuers.yaml
 
       - name: Deploy Ingress Nginx
