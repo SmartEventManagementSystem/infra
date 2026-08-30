@@ -18,15 +18,21 @@ jobs:
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
 
-      - name: Setup Google Cloud SDK
+      - name: Install Google Cloud SDK
         run: |
           curl -sSL https://sdk.cloud.google.com | bash
+          export CLOUDSDK_CORE_DISABLE_PROMPTS=1
+          export CLOUDSDK_PYTHON_SITEPACKAGES=1
+          echo "BASH_ENV=$(pwd)/google-cloud-sdk/path.bash.inc" >> $GITHUB_ENV
+          echo "CLOUDSDK_CORE_DISABLE_PROMPTS=1" >> $GITHUB_ENV
           echo "CLOUDSDK_PYTHON_SITEPACKAGES=1" >> $GITHUB_ENV
-          echo "google-cloud-sdk/bin" >> $GITHUB_PATH
 
       - name: Install auth plugin
         run: |
-          sudo apt-get update && sudo apt-get install google-cloud-cli-gke-gcloud-auth-plugin
+          export CLOUDSDK_CORE_DISABLE_PROMPTS=1
+          export CLOUDSDK_PYTHON_SITEPACKAGES=1
+          google-cloud-sdk/bin/gcloud components install gke-gcloud-auth-plugin --quiet 2>/dev/null || \
+          sudo google-cloud-sdk/bin/gcloud components install gke-gcloud-auth-plugin --quiet 2>/dev/null || true
 
       - name: Configure kubectl
         run: |
@@ -53,7 +59,7 @@ jobs:
 
       - name: Deploy ArgoCD
         run: |
-          kubectl create namespace argocd
+          kubectl create namespace argocd || true
           kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.12.3/manifests/install.yaml
 
       - name: Deploy ArgoCD Apps
