@@ -93,11 +93,6 @@ resource "google_compute_router_nat" "ems_nat" {
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 
   min_ports_per_vm = 128
-
-  log_config {
-    enable_logging = true
-    filter = "ERRORS_ONLY"
-  }
 }
 
 # ============================================
@@ -183,7 +178,7 @@ resource "google_container_cluster" "ems_cluster" {
   }
 
   cluster_autoscaling {
-    autoscaling_profile = "OPTIMIZED_UTILIZATION"
+    autoscaling_profile = "OPTIMIZE_UTILIZATION"
 
     resource_limits {
       resource_type = "cpu"
