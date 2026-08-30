@@ -1,0 +1,94 @@
+name: Deploy to GKE
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'manifests/**'
+      - 'argocd/**'
+      - '.github/workflows/deploy-gke.yml'
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: project-5ca79767-316d-4e68-a56
+  REGION: asia-southeast1
+  CLUSTER_NAME: ems-cluster
+
+jobs:
+  deploy:
+    name: Deploy to GKE
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          location: ${{ env.REGION }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Deploy ArgoCD
+        run: |
+          echo "Deploying ArgoCD..."
+          kubectl create namespace argocd || true
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.12.3/manifests/core-install.yaml
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.12.3/manifests/install.yaml
+
+          echo "Waiting for ArgoCD to be ready..."
+          kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s || true
+
+      - name: Deploy Core Infrastructure
+        run: |
+          echo "Deploying cert-manager..."
+          kubectl apply -f manifests/networking/cert-manager/namespace.yaml
+          kubectl apply -f manifests/networking/cert-manager/cert-manager.yaml
+          kubectl apply -f manifests/networking/cert-manager/issuers.yaml
+
+          echo "Deploying Ingress Nginx..."
+          kubectl apply -f manifests/networking/ingress-nginx/ingressclass.yaml
+          kubectl apply -f manifests/networking/ingress-nginx/deploy.yaml
+          kubectl apply -f manifests/networking/ingress-nginx/svc.yaml
+
+          echo "Deploying External Secrets..."
+          kubectl apply -f manifests/external-secrets/cluster-secret-store.yaml
+          kubectl apply -f manifests/external-secrets/service-secrets.yaml
+
+      - name: Deploy Data Platform
+        run: |
+          echo "Deploying Kafka..."
+          kubectl apply -f manifests/dataplatform/base/namespace.yaml
+          kubectl apply -f manifests/dataplatform/base/external-services.yaml
+          kubectl apply -f manifests/dataplatform/base/kafka-statefulset.yaml
+
+      - name: Deploy ArgoCD Applications
+        run: |
+          echo "Deploying ArgoCD Applications..."
+          kubectl apply -n argocd -f argocd/apps/
+
+      - name: Verify Deployment
+        run: |
+          echo "=== Nodes ==="
+          kubectl get nodes
+
+          echo ""
+          echo "=== Pods (kube-system) ==="
+          kubectl get pods -n kube-system
+
+          echo ""
+          echo "=== Pods (argocd) ==="
+          kubectl get pods -n argocd
+
+          echo ""
+          echo "=== Pods (cert-manager) ==="
+          kubectl get pods -n cert-manager || echo "cert-manager not ready yet"
