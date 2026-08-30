@@ -132,6 +132,13 @@ resource "google_project_iam_member" "gke_nodes_storage" {
   depends_on = [google_service_account.gke_nodes]
 }
 
+resource "google_project_iam_member" "gke_nodes_compute_instance_admin" {
+  project    = var.project_id
+  role       = "roles/compute.instanceAdmin"
+  member     = "serviceAccount:${google_service_account.gke_nodes.email}"
+  depends_on = [google_service_account.gke_nodes]
+}
+
 resource "google_project_iam_member" "gke_nodes_secretmanager" {
   project    = var.project_id
   role       = "roles/secretmanager.secretAccessor"
