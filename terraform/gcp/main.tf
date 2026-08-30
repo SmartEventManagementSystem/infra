@@ -219,6 +219,156 @@ resource "google_container_cluster" "ems_cluster" {
 }
 
 # ============================================
+# NODE POOLS
+# ============================================
+
+# System Node Pool (ArgoCD, ESO, ingress, cert-manager)
+resource "google_container_node_pool" "system_pool" {
+  name       = "system-pool"
+  location   = var.region
+  cluster    = google_container_cluster.ems_cluster.id
+  node_count = 2
+
+  node_config {
+    machine_type    = var.system_node_machine_type
+    disk_size_gb    = 50
+    disk_type       = "pd-balanced"
+    preemptible     = false
+    service_account = google_service_account.gke_nodes.email
+
+    labels = {
+      "node-pool" = "system"
+      "tier"      = "control"
+    }
+
+    shielded_instance_config {
+      enable_secure_boot          = true
+      enable_integrity_monitoring = true
+    }
+
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
+
+    metadata = {
+      "disable-legacy-endpoints" = "true"
+    }
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
+  autoscaling {
+    min_node_count = 2
+    max_node_count = 3
+  }
+
+  upgrade_settings {
+    max_surge       = 1
+    max_unavailable = 0
+  }
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
+# App Node Pool (web-client, event-service, ai-service)
+resource "google_container_node_pool" "app_pool" {
+  name       = "app-pool"
+  location   = var.region
+  cluster    = google_container_cluster.ems_cluster.id
+  node_count = 2
+
+  node_config {
+    machine_type    = var.app_node_machine_type
+    disk_size_gb    = 100
+    disk_type       = "pd-ssd"
+    preemptible     = false
+    service_account = google_service_account.gke_nodes.email
+
+    labels = {
+      "node-pool" = "app"
+      "tier"      = "application"
+    }
+
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
+
+    metadata = {
+      "disable-legacy-endpoints" = "true"
+    }
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
+  autoscaling {
+    min_node_count = 2
+    max_node_count = 5
+  }
+
+  upgrade_settings {
+    max_surge       = 1
+    max_unavailable = 0
+  }
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
+# Data Node Pool (Kafka)
+resource "google_container_node_pool" "data_pool" {
+  name       = "data-pool"
+  location   = var.region
+  cluster    = google_container_cluster.ems_cluster.id
+  node_count = 1
+
+  node_config {
+    machine_type    = var.data_node_machine_type
+    disk_size_gb    = 100
+    disk_type       = "pd-ssd"
+    preemptible     = true
+    service_account = google_service_account.gke_nodes.email
+
+    labels = {
+      "node-pool" = "data"
+      "tier"      = "dataplatform"
+    }
+
+    taint {
+      key    = "node-pool"
+      value  = "data"
+      effect = "NO_SCHEDULE"
+    }
+
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
+  }
+
+  autoscaling {
+    min_node_count = 1
+    max_node_count = 2
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
+# ============================================
 # POSTGRESQL - Cloud SQL
 # ============================================
 
