@@ -145,7 +145,7 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis:7.4.0-alpine
+          image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/redis:7.4.0-alpine
           imagePullPolicy: Always
           ports:
             - containerPort: 6379
@@ -176,7 +176,7 @@ spec:
       serviceAccountName: argocd-server
       containers:
         - name: argocd-repo-server
-          image: quay.io/argoproj/argocd:v2.13.3
+          image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/argocd:v2.13.3
           imagePullPolicy: Always
           command: ["argocd-repo-server"]
           ports:
@@ -227,7 +227,7 @@ spec:
       serviceAccountName: argocd-server
       containers:
         - name: argocd-application-controller
-          image: quay.io/argoproj/argocd:v2.13.3
+          image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/argocd:v2.13.3
           imagePullPolicy: Always
           command: ["argocd-application-controller"]
           resources:
@@ -276,7 +276,7 @@ spec:
       serviceAccountName: argocd-server
       containers:
         - name: argocd-server
-          image: quay.io/argoproj/argocd:v2.13.3
+          image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/argocd:v2.13.3
           imagePullPolicy: Always
           command: ["argocd-server"]
           ports:

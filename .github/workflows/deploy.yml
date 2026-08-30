@@ -13,6 +13,9 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  PROJECT_ID: project-5ca79767-316d-4e68-a56
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -55,10 +58,26 @@ jobs:
           kubectl apply -f manifests/dataplatform/base/namespace.yaml
           kubectl apply -f manifests/dataplatform/base/kafka-statefulset.yaml
 
+      - name: Configure Docker for GCR
+        run: |
+          gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
+
+      - name: Pull and push ArgoCD images to GCR
+        run: |
+          GCR_HOST="asia-southeast1-docker.pkg.dev/${{ env.PROJECT_ID }}/argocd"
+
+          docker pull redis:7.4.0-alpine
+          docker tag redis:7.4.0-alpine "${GCR_HOST}/redis:7.4.0-alpine"
+          docker push "${GCR_HOST}/redis:7.4.0-alpine"
+
+          docker pull quay.io/argoproj/argocd:v2.13.3
+          docker tag quay.io/argoproj/argocd:v2.13.3 "${GCR_HOST}/argocd:v2.13.3"
+          docker push "${GCR_HOST}/argocd:v2.13.3"
+
       - name: Deploy ArgoCD
         run: |
           kubectl create namespace argocd || true
-          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.12.3/manifests/install.yaml
+          kubectl apply -n argocd -f argocd/bootstrap/argocd-install.yaml
 
       - name: Deploy ArgoCD Apps
         run: |
