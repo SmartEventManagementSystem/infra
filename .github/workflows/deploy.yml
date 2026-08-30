@@ -1,0 +1,55 @@
+name: Deploy to GKE
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'manifests/**'
+      - 'argocd/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+          echo "KUBECONFIG=$(pwd)/kubeconfig" >> $GITHUB_ENV
+
+      - name: Deploy cert-manager
+        run: |
+          kubectl apply -f manifests/networking/cert-manager/namespace.yaml
+          kubectl apply -f manifests/networking/cert-manager/cert-manager.yaml
+          kubectl apply -f manifests/networking/cert-manager/issuers.yaml
+
+      - name: Deploy Ingress Nginx
+        run: |
+          kubectl apply -f manifests/networking/ingress-nginx/ingressclass.yaml
+          kubectl apply -f manifests/networking/ingress-nginx/deploy.yaml
+          kubectl apply -f manifests/networking/ingress-nginx/svc.yaml
+
+      - name: Deploy Kafka
+        run: |
+          kubectl apply -f manifests/dataplatform/base/namespace.yaml
+          kubectl apply -f manifests/dataplatform/base/external-services.yaml
+          kubectl apply -f manifests/dataplatform/base/kafka-statefulset.yaml
+
+      - name: Deploy ArgoCD
+        run: |
+          kubectl create namespace argocd
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.12.3/manifests/install.yaml
+
+      - name: Deploy ArgoCD Apps
+        run: |
+          kubectl apply -n argocd -f argocd/apps/
+
+      - name: Verify
+        run: |
+          kubectl get pods -A
+          kubectl get nodes
