@@ -111,10 +111,7 @@ jobs:
             "google_service_account.gke_nodes:projects/project-5ca79767-316d-4e68-a56/serviceAccounts/ems-gke-nodes@project-5ca79767-316d-4e68-a56.iam.gserviceaccount.com" \
             "google_service_account.ems_deployer:projects/project-5ca79767-316d-4e68-a56/serviceAccounts/ems-deployer@project-5ca79767-316d-4e68-a56.iam.gserviceaccount.com" \
             "google_container_cluster.ems_cluster:projects/project-5ca79767-316d-4e68-a56/locations/asia-southeast1/clusters/ems-cluster" \
-            "google_container_node_pool.system_pool:projects/project-5ca79767-316d-4e68-a56/locations/asia-southeast1/clusters/ems-cluster/nodePools/system-pool" \
-            "google_container_node_pool.app_pool:projects/project-5ca79767-316d-4e68-a56/locations/asia-southeast1/clusters/ems-cluster/nodePools/app-pool" \
-            "google_container_node_pool.data_pool:projects/project-5ca79767-316d-4e68-a56/locations/asia-southeast1/clusters/ems-cluster/nodePools/data-pool" \
-            "google_sql_database_instance.ems_postgres:project-5ca79767-316d-4e68-a56:asia-southeast1:ems-postgres" \
+            "google_sql_database_instance.ems_postgres:ems-postgres" \
             "google_redis_instance.ems_redis:projects/project-5ca79767-316d-4e68-a56/locations/asia-southeast1/instances/ems-redis" \
             "google_storage_bucket.ems_backups:project-5ca79767-316d-4e68-a56-ems-backups" \
             "google_storage_bucket.ems_datalake:project-5ca79767-316d-4e68-a56-ems-datalake"; do
