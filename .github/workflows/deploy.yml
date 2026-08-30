@@ -62,7 +62,10 @@ jobs:
 
       - name: Deploy ArgoCD Apps
         run: |
-          kubectl apply -n argocd -f argocd/apps/
+          kubectl apply -n argocd -f argocd/apps/event-service.yaml || true
+          kubectl apply -n argocd -f argocd/apps/dataplatform.yaml || true
+          kubectl apply -n argocd -f argocd/apps/external-secrets.yaml || true
+          kubectl apply -n argocd -f argocd/apps/networking.yaml || true
 
       - name: Verify
         run: |
