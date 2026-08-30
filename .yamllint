@@ -1,0 +1,20 @@
+# yamllint config file
+extends:
+  - default
+
+rules:
+  # Ignore line length for workflows (complex commands need long lines)
+  line-length:
+    level: warning
+    max: 200
+
+  # Kustomization files don't need document start marker
+  document-start: disable
+
+  # Allow common truthy values in YAML
+  truthy:
+    allowed-values:
+      - 'true'
+      - 'false'
+      - 'yes'
+      - 'no'
