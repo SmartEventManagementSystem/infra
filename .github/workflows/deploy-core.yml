@@ -74,12 +74,15 @@ jobs:
 
           echo "Deploying to $VM_IP with tag $TAG"
 
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/deploy_key ubuntu@$VM_IP << "ENDSSH"
+          ssh -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -i ~/.ssh/deploy_key ubuntu@$VM_IP << "ENDSSH"
           set -e
           cd /home/ubuntu/ems-platform
 
           # Login to GHCR
-          echo '${{ secrets.GITHUB_TOKEN }}' | docker login ${{ env.REGISTRY }} -u '${{ github.actor }}' --password-stdin
+          echo '${{ secrets.GITHUB_TOKEN }}' | docker login \
+            ${{ env.REGISTRY }} -u '${{ github.actor }}' --password-stdin
 
           # Set TAG
           export TAG="$TAG"
@@ -93,9 +96,12 @@ jobs:
 
           # Pull images from GHCR (built by other repos)
           echo "Pulling images from GHCR..."
-          docker pull $REGISTRY/$IMAGE_PREFIX/web-client:$TAG || echo "web-client not found, using latest"
-          docker pull $REGISTRY/$IMAGE_PREFIX/event-service:$TAG || echo "event-service not found, using latest"
-          docker pull $REGISTRY/$IMAGE_PREFIX/ai-service:$TAG || echo "ai-service not found, using latest"
+          docker pull $REGISTRY/$IMAGE_PREFIX/web-client:$TAG \
+            || echo "web-client not found, using latest"
+          docker pull $REGISTRY/$IMAGE_PREFIX/event-service:$TAG \
+            || echo "event-service not found, using latest"
+          docker pull $REGISTRY/$IMAGE_PREFIX/ai-service:$TAG \
+            || echo "ai-service not found, using latest"
 
           # Tag images for docker-compose
           docker tag $REGISTRY/$IMAGE_PREFIX/web-client:$TAG ems-web-client:latest 2>/dev/null || true

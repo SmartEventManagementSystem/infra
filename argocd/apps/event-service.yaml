@@ -1,3 +1,4 @@
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -12,7 +13,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/smarteventmanagementsystem/event-service-platform.git
+    repoURL: https://github.com/smarteventmanagementsystem/
+      event-service-platform.git
     targetRevision: main
     path: k8s/overlays/prod
   destination:

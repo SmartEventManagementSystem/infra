@@ -34,16 +34,21 @@ jobs:
       - name: Validate service manifests
         run: |
           echo "Validating manifests..."
-          kubectl apply --dry-run=client -f manifests/networking/ 2>&1 || true
-          kubectl apply --dry-run=client -f manifests/external-secrets/ 2>&1 || true
-          kubectl apply --dry-run=client -f manifests/dataplatform/ 2>&1 || true
+          kubectl apply --dry-run=client \
+            -f manifests/networking/ 2>&1 || true
+          kubectl apply --dry-run=client \
+            -f manifests/external-secrets/ 2>&1 || true
+          kubectl apply --dry-run=client \
+            -f manifests/dataplatform/ 2>&1 || true
 
       - name: Validate kustomization
         run: |
           echo "Validating kustomization files..."
-          for dir in argocd/apps manifests/networking manifests/external-secrets manifests/dataplatform; do
+          for dir in argocd/apps manifests/networking \
+            manifests/external-secrets manifests/dataplatform; do
             if [ -f "$dir/kustomization.yaml" ]; then
-              kubectl kustomize "$dir" > /dev/null 2>&1 && echo "✓ $dir OK" || echo "✗ $dir FAILED"
+              kubectl kustomize "$dir" > /dev/null 2>&1 \
+                && echo "✓ $dir OK" || echo "✗ $dir FAILED"
             fi
           done
 
