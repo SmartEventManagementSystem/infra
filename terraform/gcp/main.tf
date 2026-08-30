@@ -321,7 +321,7 @@ resource "google_container_node_pool" "data_pool" {
     taint {
       key    = "node-pool"
       value  = "data"
-      effect = "NoSchedule"
+      effect = "NO_SCHEDULE"
     }
 
     workload_metadata_config {
