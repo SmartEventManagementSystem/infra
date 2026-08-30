@@ -318,13 +318,11 @@ resource "google_container_node_pool" "data_pool" {
       "tier"      = "dataplatform"
     }
 
-    taint = [
-      {
-        key    = "node-pool"
-        value  = "data"
-        effect = "NoSchedule"
-      }
-    ]
+    taint {
+      key    = "node-pool"
+      value  = "data"
+      effect = "NoSchedule"
+    }
 
     workload_metadata_config {
       mode = "GKE_METADATA"
