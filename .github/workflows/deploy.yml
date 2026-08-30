@@ -21,8 +21,12 @@ jobs:
       - name: Setup Google Cloud SDK
         run: |
           curl -sSL https://sdk.cloud.google.com | bash
-          echo "BASH_ENV=$(telemetry_dir)/enter-env.sh" >> $GITHUB_ENV
-          $(telemetry_dir)/bin/gcloud init --skip-internal-prompt || true
+          echo "CLOUDSDK_PYTHON_SITEPACKAGES=1" >> $GITHUB_ENV
+          echo "google-cloud-sdk/bin" >> $GITHUB_PATH
+
+      - name: Install auth plugin
+        run: |
+          gcloud components install gke-gcloud-auth-plugin --quiet
 
       - name: Configure kubectl
         run: |
