@@ -143,6 +143,8 @@ spec:
       labels:
         app: argocd-redis
     spec:
+      imagePullSecrets:
+        - name: gcr-json-key
       containers:
         - name: redis
           image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/redis:7.4.0-alpine
@@ -174,6 +176,8 @@ spec:
         app: argocd-repo-server
     spec:
       serviceAccountName: argocd-server
+      imagePullSecrets:
+        - name: gcr-json-key
       containers:
         - name: argocd-repo-server
           image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/argocd:v2.13.3
@@ -225,6 +229,8 @@ spec:
         app: argocd-application-controller
     spec:
       serviceAccountName: argocd-server
+      imagePullSecrets:
+        - name: gcr-json-key
       containers:
         - name: argocd-application-controller
           image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/argocd:v2.13.3
@@ -274,6 +280,8 @@ spec:
         app: argocd-server
     spec:
       serviceAccountName: argocd-server
+      imagePullSecrets:
+        - name: gcr-json-key
       containers:
         - name: argocd-server
           image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/argocd:v2.13.3

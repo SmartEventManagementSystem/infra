@@ -40,6 +40,16 @@ jobs:
           location: asia-southeast1
           project_id: project-5ca79767-316d-4e68-a56
 
+      - name: Create GCR imagePullSecrets
+        run: |
+          kubectl create secret docker-registry gcr-json-key \
+            --namespace=argocd \
+            --docker-server=asia-southeast1-docker.pkg.dev \
+            --docker-username=_json_key \
+            --docker-password="${{ secrets.GCP_SA_KEY }}" \
+            --docker-email=ci@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            -o yaml --dry-run=client | kubectl apply -f -
+
       - name: Deploy cert-manager
         run: |
           kubectl apply -f manifests/networking/cert-manager/namespace.yaml
