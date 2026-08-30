@@ -53,7 +53,6 @@ jobs:
       - name: Deploy Kafka
         run: |
           kubectl apply -f manifests/dataplatform/base/namespace.yaml
-          kubectl apply -f manifests/dataplatform/base/external-services.yaml
           kubectl apply -f manifests/dataplatform/base/kafka-statefulset.yaml
 
       - name: Deploy ArgoCD
