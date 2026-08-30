@@ -33,7 +33,9 @@ patches:
               end
               return hs
         ui.csslabel: |
-          app.kubernetes.io/name app.kubernetes.io/instance app.kubernetes.io/component
+          app.kubernetes.io/name
+          app.kubernetes.io/instance
+          app.kubernetes.io/component
         ui.bannercontent: |
           🚀 EMS Event Management Platform - Development Environment
 

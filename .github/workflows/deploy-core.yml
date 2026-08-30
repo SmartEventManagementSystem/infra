@@ -104,9 +104,12 @@ jobs:
             || echo "ai-service not found, using latest"
 
           # Tag images for docker-compose
-          docker tag $REGISTRY/$IMAGE_PREFIX/web-client:$TAG ems-web-client:latest 2>/dev/null || true
-          docker tag $REGISTRY/$IMAGE_PREFIX/event-service:$TAG ems-event-service:latest 2>/dev/null || true
-          docker tag $REGISTRY/$IMAGE_PREFIX/ai-service:$TAG ems-ai-service:latest 2>/dev/null || true
+          docker tag $REGISTRY/$IMAGE_PREFIX/web-client:$TAG \
+            ems-web-client:latest 2>/dev/null || true
+          docker tag $REGISTRY/$IMAGE_PREFIX/event-service:$TAG \
+            ems-event-service:latest 2>/dev/null || true
+          docker tag $REGISTRY/$IMAGE_PREFIX/ai-service:$TAG \
+            ems-ai-service:latest 2>/dev/null || true
 
           # Create .env file
           cat > .env << 'EOF'
@@ -145,16 +148,26 @@ jobs:
           sleep 45
 
           echo "Running health checks..."
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/deploy_key ubuntu@$VM_IP << "ENDSSH"
+          ssh -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -i ~/.ssh/deploy_key ubuntu@$VM_IP << "ENDSSH"
           echo "=== Container Status ==="
           docker ps --format "table {{.Names}}\t{{.Status}}"
 
           echo ""
           echo "=== Health Checks ==="
-          curl -sf http://localhost:81/ 2>/dev/null && echo "✅ Nginx Proxy Manager" || echo "⚠️ Nginx Proxy Manager"
-          curl -sf http://localhost:8080/health 2>/dev/null && echo "✅ Event Service" || echo "❌ Event Service"
-          curl -sf http://localhost:8081/health 2>/dev/null && echo "✅ AI Service" || echo "❌ AI Service"
-          curl -sf http://localhost:3000 2>/dev/null && echo "✅ Web Client" || echo "❌ Web Client"
+          curl -sf http://localhost:81/ 2>/dev/null \
+            && echo "✅ Nginx Proxy Manager" \
+            || echo "⚠️ Nginx Proxy Manager"
+          curl -sf http://localhost:8080/health 2>/dev/null \
+            && echo "✅ Event Service" \
+            || echo "❌ Event Service"
+          curl -sf http://localhost:8081/health 2>/dev/null \
+            && echo "✅ AI Service" \
+            || echo "❌ AI Service"
+          curl -sf http://localhost:3000 2>/dev/null \
+            && echo "✅ Web Client" \
+            || echo "❌ Web Client"
           ENDSSH
 
       - name: Discord Success
