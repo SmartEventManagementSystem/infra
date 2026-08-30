@@ -1,6 +1,5 @@
 # yamllint config file
-extends:
-  - default
+extends: default
 
 rules:
   # Ignore line length for workflows (complex commands need long lines)
