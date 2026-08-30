@@ -7,6 +7,6 @@ runs:
       shell: bash
       run: |
         set -e
-        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/" \
-          "master/hack/install_kustomize.sh" | bash
+        URL="https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
+        curl -s "$URL" | bash
         sudo mv kustomize /usr/local/bin/
