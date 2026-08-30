@@ -1,3 +1,4 @@
+---
 # ArgoCD RBAC Configuration
 apiVersion: v1
 kind: ConfigMap

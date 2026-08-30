@@ -1,3 +1,4 @@
+---
 # ArgoCD ConfigMap - Application definitions
 apiVersion: v1
 kind: ConfigMap
