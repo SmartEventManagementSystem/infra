@@ -18,6 +18,12 @@ jobs:
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
 
+      - name: Setup Google Cloud SDK
+        run: |
+          curl -sSL https://sdk.cloud.google.com | bash
+          echo "BASH_ENV=$(telemetry_dir)/enter-env.sh" >> $GITHUB_ENV
+          $(telemetry_dir)/bin/gcloud init --skip-internal-prompt || true
+
       - name: Configure kubectl
         run: |
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
