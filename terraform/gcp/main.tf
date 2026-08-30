@@ -145,17 +145,6 @@ resource "google_project_iam_member" "ems_terraform_compute_sa_user" {
   member     = "serviceAccount:${var.gcp_service_account_email}"
   depends_on = [google_service_account.gke_nodes]
 }
-  project = var.project_id
-  role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${google_service_account.gke_nodes.email}"
-}
-
-# Allow ems-terraform SA to use default Compute SA (needed for GKE cluster)
-resource "google_project_iam_member" "ems_terraform_compute_sa_user" {
-  project = var.project_id
-  role    = "roles/iam.serviceAccountUser"
-  member  = "serviceAccount:${var.gcp_service_account_email}"
-}
 
 # ============================================
 # GKE CLUSTER
