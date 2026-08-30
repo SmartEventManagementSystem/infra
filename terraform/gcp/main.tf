@@ -271,7 +271,7 @@ resource "google_container_node_pool" "system_pool" {
   }
 
   lifecycle {
-    ignore_changes = [status, current_node_count]
+    ignore_changes = all
   }
 }
 
@@ -319,7 +319,7 @@ resource "google_container_node_pool" "app_pool" {
   }
 
   lifecycle {
-    ignore_changes = [status, current_node_count]
+    ignore_changes = all
   }
 }
 
@@ -364,7 +364,7 @@ resource "google_container_node_pool" "data_pool" {
   }
 
   lifecycle {
-    ignore_changes = [status, current_node_count]
+    ignore_changes = all
   }
 }
 
