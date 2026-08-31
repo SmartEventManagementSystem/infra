@@ -15,7 +15,7 @@ permissions:
 
 env:
   PROJECT_ID: project-5ca79767-316d-4e68-a56
-  SA_EMAIL: github-actions-deploy@project-5ca79767-316d-4e68-a56.iam.gserviceaccount.com
+  SA_EMAIL: ems-deployer@project-5ca79767-316d-4e68-a56.iam.gserviceaccount.com
 
 jobs:
   deploy:
