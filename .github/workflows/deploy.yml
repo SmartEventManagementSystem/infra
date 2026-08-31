@@ -42,13 +42,8 @@ jobs:
 
       - name: Create GCR imagePullSecrets
         run: |
-          kubectl create secret docker-registry gcr-json-key \
-            --namespace=argocd \
-            --docker-server=asia-southeast1-docker.pkg.dev \
-            --docker-username=_json_key \
-            --docker-password="${{ secrets.GCP_SA_KEY }}" \
-            --docker-email=ci@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
-            -o yaml --dry-run=client | kubectl apply -f -
+          echo "${{ secrets.GCP_SA_KEY }}" > /tmp/gcr-key.json
+          kubectl create secret docker-registry gcr-json-key --namespace=argocd --docker-server=asia-southeast1-docker.pkg.dev --docker-username=_json_key --docker-password="$(cat /tmp/gcr-key.json)" --docker-email=ci@${{ env.PROJECT_ID }}.iam.gserviceaccount.com -o yaml --dry-run=client | kubectl apply -f -
 
       - name: Deploy cert-manager
         run: |
