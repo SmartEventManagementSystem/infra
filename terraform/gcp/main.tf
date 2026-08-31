@@ -219,6 +219,43 @@ resource "google_container_cluster" "ems_cluster" {
 }
 
 # ============================================
+# NODE POOL - System (e2-small for more memory)
+# ============================================
+
+resource "google_container_node_pool" "system_pool" {
+  name       = "system-pool"
+  location   = var.region
+  cluster    = google_container_cluster.ems_cluster.name
+  node_count = 2
+
+  node_config {
+    machine_type = "e2-small"
+    disk_size_gb = 20
+    disk_type = "pd-balanced"
+    preemptible = false
+
+    service_account = google_service_account.gke_nodes.email
+
+    labels = {
+      "pool" = "system"
+      "workload" = "infrastructure"
+    }
+
+    taint = []
+  }
+
+  autoscaling {
+    min_node_count = 1
+    max_node_count = 3
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+}
+
+# ============================================
 # POSTGRESQL - Cloud SQL
 # ============================================
 

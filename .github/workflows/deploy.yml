@@ -76,15 +76,13 @@ jobs:
             --description="ArgoCD images" \
             --project=${{ env.PROJECT_ID }} 2>/dev/null || true
 
-          gcloud artifacts repositories add-iam-policy-binding argocd \
-            --location=asia-southeast1 \
-            --project=${{ env.PROJECT_ID }} \
+          gcloud projects add-iam-policy-binding ${{ env.PROJECT_ID }} \
             --member=serviceAccount:${{ env.SA_EMAIL }} \
             --role=roles/artifactregistry.writer 2>/dev/null || true
 
           gcloud projects add-iam-policy-binding ${{ env.PROJECT_ID }} \
             --member=serviceAccount:${{ env.SA_EMAIL }} \
-            --role=roles/artifactregistry.writer 2>/dev/null || true
+            --role=roles/iam.serviceAccountTokenCreator 2>/dev/null || true
 
       - name: Pull and push ArgoCD images to GCR
         run: |

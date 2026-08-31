@@ -154,10 +154,10 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 64Mi
+              memory: 32Mi
             limits:
-              cpu: 200m
-              memory: 128Mi
+              cpu: 50m
+              memory: 64Mi
 ---
 # ArgoCD Repo Server Deployment
 apiVersion: apps/v1
@@ -166,7 +166,7 @@ metadata:
   name: argocd-repo-server
   namespace: argocd
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: argocd-repo-server
@@ -187,11 +187,11 @@ spec:
             - containerPort: 8081
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 50m
+              memory: 64Mi
             limits:
               cpu: 500m
-              memory: 512Mi
+              memory: 128Mi
           env:
             - name: ARGOCD_RECONCILIATION_TIMEOUT
               value: "180s"
@@ -219,7 +219,7 @@ metadata:
   name: argocd-application-controller
   namespace: argocd
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: argocd-application-controller
@@ -238,11 +238,11 @@ spec:
           command: ["argocd-application-controller"]
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 50m
+              memory: 64Mi
             limits:
               cpu: 1000m
-              memory: 1Gi
+              memory: 512Mi
           env:
             - name: ARGOCD_CONTROLLER_REPLICAS
               value: "2"
@@ -270,7 +270,7 @@ metadata:
   name: argocd-server
   namespace: argocd
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: argocd-server
@@ -292,11 +292,11 @@ spec:
             - containerPort: 8083
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 50m
+              memory: 64Mi
             limits:
               cpu: 500m
-              memory: 512Mi
+              memory: 128Mi
           env:
             - name: ARGOCD_SERVER_REPLICAS
               value: "2"
