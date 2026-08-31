@@ -82,6 +82,7 @@ jobs:
       - name: Deploy ArgoCD
         run: |
           kubectl create namespace argocd || true
+          kubectl delete deployment -n argocd argocd-redis argocd-repo-server argocd-application-controller argocd-server --ignore-not-found=true
           kubectl apply -n argocd -f argocd/bootstrap/argocd-install.yaml
 
       - name: Deploy ArgoCD Apps
