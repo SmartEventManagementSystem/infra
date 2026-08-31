@@ -71,33 +71,13 @@ jobs:
         run: |
           gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
 
-      - name: Create GCR repository and grant permissions
+      - name: Create GCR repository (if not exists)
         run: |
           gcloud artifacts repositories create argocd \
             --repository-format=docker \
             --location=asia-southeast1 \
             --description="ArgoCD images" \
             --project=${{ env.PROJECT_ID }} 2>/dev/null || true
-
-          gcloud projects add-iam-policy-binding ${{ env.PROJECT_ID }} \
-            --member=serviceAccount:${{ env.SA_EMAIL }} \
-            --role=roles/artifactregistry.writer 2>/dev/null || true
-
-          gcloud projects add-iam-policy-binding ${{ env.PROJECT_ID }} \
-            --member=serviceAccount:${{ env.SA_EMAIL }} \
-            --role=roles/iam.serviceAccountTokenCreator 2>/dev/null || true
-
-      - name: Pull and push ArgoCD images to GCR
-        run: |
-          GCR_HOST="asia-southeast1-docker.pkg.dev/${{ env.PROJECT_ID }}/argocd"
-
-          docker pull redis:7.4.0-alpine
-          docker tag redis:7.4.0-alpine "${GCR_HOST}/redis:7.4.0-alpine"
-          docker push "${GCR_HOST}/redis:7.4.0-alpine"
-
-          docker pull quay.io/argoproj/argocd:v2.13.3
-          docker tag quay.io/argoproj/argocd:v2.13.3 "${GCR_HOST}/argocd:v2.13.3"
-          docker push "${GCR_HOST}/argocd:v2.13.3"
 
       - name: Deploy ArgoCD
         run: |
