@@ -19,20 +19,17 @@ spec:
       containers:
         - name: fe
           image: starrocks/fe-ubuntu:3.3.4
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+              /opt/starrocks/fe/bin/start_fe.sh --daemon
+              tail -f /dev/null
           ports:
             - name: query
               containerPort: 9030
             - name: http
               containerPort: 8030
-            - name: rpc
-              containerPort: 9020
-          env:
-            - name: FE_CONFbergen_HOME
-              value: "/opt/starrocks/fe"
-            - name: FE_CONF_log_level
-              value: INFO
-            - name: FE_CONF_edit_log_port
-              value: "9011"
           resources:
             requests:
               cpu: 250m
@@ -42,9 +39,14 @@ spec:
               memory: 1Gi
           readinessProbe:
             tcpSocket:
-              port: 9030
-            initialDelaySeconds: 30
+              port: 8030
+            initialDelaySeconds: 60
             periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8030
+            initialDelaySeconds: 120
+            periodSeconds: 20
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -66,6 +68,11 @@ spec:
       containers:
         - name: be
           image: starrocks/be-ubuntu:3.3.4
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              /opt/starrocks/be/bin/start_be.sh --daemon
+              tail -f /dev/null
           ports:
             - name: be-thrift
               containerPort: 9060
@@ -73,11 +80,6 @@ spec:
               containerPort: 8040
             - name: be-heartbeat
               containerPort: 9050
-          env:
-            - name: BE_CONF Bergen_HOME
-              value: "/opt/starrocks/be"
-            - name: BE_CONF_storage_volume_path
-              value: /opt/starrocks/storage
           resources:
             requests:
               cpu: 250m
@@ -87,9 +89,14 @@ spec:
               memory: 2Gi
           readinessProbe:
             tcpSocket:
-              port: 9060
+              port: 8040
             initialDelaySeconds: 60
             periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8040
+            initialDelaySeconds: 120
+            periodSeconds: 20
           volumeMounts:
             - name: storage
               mountPath: /opt/starrocks/storage
