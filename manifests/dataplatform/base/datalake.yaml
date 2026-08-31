@@ -53,20 +53,7 @@ spec:
               mountPath: /data
       volumes:
         - name: data
-          persistentVolumeClaim:
-            claimName: minio-data
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: minio-data
-  namespace: dataplatform
-spec:
-  accessModes: ["ReadWriteOnce"]
-  storageClassName: standard-rwo
-  resources:
-    requests:
-      storage: 10Gi
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
