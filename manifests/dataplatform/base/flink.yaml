@@ -1,0 +1,116 @@
+# Apache Flink Session Cluster
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-jobmanager
+  namespace: dataplatform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flink
+      component: jobmanager
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: jobmanager
+    spec:
+      containers:
+        - name: jobmanager
+          image: apache/flink:1.19.1
+          args: ["jobmanager"]
+          ports:
+            - name: rpc
+              containerPort: 6123
+            - name: blob-server
+              containerPort: 6124
+            - name: ui
+              containerPort: 8081
+          env:
+            - name: KUBERNETES_SERVICE_ACCOUNT
+              value: flink-jobmanager
+            - name: Flink_Memory
+              value: 1024m
+            - name: FLINK_ENV_JAVA_OPTS
+              value: "-Xms256m -Xmx1024m"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-taskmanager
+  namespace: dataplatform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flink
+      component: taskmanager
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: taskmanager
+    spec:
+      containers:
+        - name: taskmanager
+          image: apache/flink:1.19.1
+          args: ["taskmanager"]
+          ports:
+            - name: data
+              containerPort: 6122
+          env:
+            - name: KUBERNETES_SERVICE_ACCOUNT
+              value: flink-taskmanager
+            - name: Flink_Memory
+              value: 1024m
+            - name: FLINK_ENV_JAVA_OPTS
+              value: "-Xms256m -Xmx1024m"
+            - name: TASK_MANAGER_NUMBER_OF_TASK_SLOTS
+              value: "2"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flink-jobmanager
+  namespace: dataplatform
+spec:
+  type: ClusterIP
+  ports:
+    - name: rpc
+      port: 6123
+    - name: blob-server
+      port: 6124
+    - name: ui
+      port: 8081
+  selector:
+    app: flink
+    component: jobmanager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flink-taskmanager
+  namespace: dataplatform
+spec:
+  clusterIP: None
+  ports:
+    - name: data
+      port: 6122
+  selector:
+    app: flink
+    component: taskmanager

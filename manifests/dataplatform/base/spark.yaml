@@ -1,0 +1,51 @@
+# Apache Spark - Batch Processing
+# Note: Spark runs in client mode, jobs submitted via spark-submit
+# For production, use Spark Operator or Livy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-history-server
+  namespace: dataplatform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark
+      component: history
+  template:
+    metadata:
+      labels:
+        app: spark
+        component: history
+    spec:
+      containers:
+        - name: spark-history-server
+          image: bitnami/spark:3.5.1
+          command: ["/opt/bitnami/spark/bin/start-history-server.sh"]
+          ports:
+            - name: ui
+              containerPort: 18080
+          env:
+            - name: SPARK_CONF_logHistory___s3__enabled
+              value: "true"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-history-server
+  namespace: dataplatform
+spec:
+  type: ClusterIP
+  ports:
+    - name: ui
+      port: 18080
+  selector:
+    app: spark
+    component: history

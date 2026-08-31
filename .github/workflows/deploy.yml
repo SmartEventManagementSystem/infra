@@ -25,6 +25,9 @@ jobs:
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
 
+      - name: Setup kustomize
+        uses: ./.github/actions/kustomize
+
       - name: Authenticate with GCP
         uses: google-github-actions/auth@v2
         with:
@@ -62,10 +65,9 @@ jobs:
           kubectl apply -f manifests/networking/ingress-nginx/deploy.yaml
           kubectl apply -f manifests/networking/ingress-nginx/svc.yaml
 
-      - name: Deploy Kafka
+      - name: Deploy Data Platform
         run: |
-          kubectl apply -f manifests/dataplatform/base/namespace.yaml
-          kubectl apply -f manifests/dataplatform/base/kafka-statefulset.yaml
+          kubectl apply -k manifests/dataplatform/base/
 
       - name: Configure Docker for GCR
         run: |

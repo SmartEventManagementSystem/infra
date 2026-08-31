@@ -1,0 +1,127 @@
+# Apache Airflow with LocalExecutor
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-webserver
+  namespace: dataplatform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow
+      component: webserver
+  template:
+    metadata:
+      labels:
+        app: airflow
+        component: webserver
+    spec:
+      containers:
+        - name: airflow-webserver
+          image: apache/airflow:2.10.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: webserver
+              containerPort: 8080
+          env:
+            - name: AIRFLOW__CORE__EXECUTOR
+              value: LocalExecutor
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              value: "postgresql+psycopg2://emsuser:changeme@postgres:5432/ems_events"
+            - name: AIRFLOW__CORE__FERNET_KEY
+              value: "D7Gh3T8kL2mN5pQ7rS1uX4yB6cE9fH0jK2mN5pQ="
+            - name: AIRFLOW__CORE__LOAD_EXAMPLES
+              value: "false"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-scheduler
+  namespace: dataplatform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow
+      component: scheduler
+  template:
+    metadata:
+      labels:
+        app: airflow
+        component: scheduler
+    spec:
+      containers:
+        - name: airflow-scheduler
+          image: apache/airflow:2.10.1
+          imagePullPolicy: IfNotPresent
+          command: ["airflow", "scheduler"]
+          env:
+            - name: AIRFLOW__CORE__EXECUTOR
+              value: LocalExecutor
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              value: "postgresql+psycopg2://emsuser:changeme@postgres:5432/ems_events"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-triggerer
+  namespace: dataplatform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow
+      component: triggerer
+  template:
+    metadata:
+      labels:
+        app: airflow
+        component: triggerer
+    spec:
+      containers:
+        - name: airflow-triggerer
+          image: apache/airflow:2.10.1
+          imagePullPolicy: IfNotPresent
+          command: ["airflow", "triggerer"]
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-webserver
+  namespace: dataplatform
+spec:
+  type: ClusterIP
+  ports:
+    - name: webserver
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: airflow
+    component: webserver

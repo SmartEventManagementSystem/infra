@@ -6,7 +6,7 @@ metadata:
   namespace: dataplatform
 spec:
   serviceName: kafka-headless
-  replicas: 3
+  replicas: 1
   podManagementPolicy: Parallel
   selector:
     matchLabels:
@@ -51,15 +51,15 @@ spec:
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT"
             - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-              value: "0@kafka-0.kafka-headless.dataplatform.svc.cluster.local:9093,1@kafka-1.kafka-headless.dataplatform.svc.cluster.local:9093,2@kafka-2.kafka-headless.dataplatform.svc.cluster.local:9093"
+              value: "0@kafka-0.kafka-headless.dataplatform.svc.cluster.local:9093"
             - name: KAFKA_CONTROLLER_LISTENER_NAMES
               value: "CONTROLLER"
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
-              value: "3"
+              value: "1"
             - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
-              value: "2"
+              value: "1"
             - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
-              value: "3"
+              value: "1"
             - name: KAFKA_LOG_DIRS
               value: "/var/lib/kafka/data"
             - name: KAFKA_LOG_RETENTION_HOURS
@@ -68,11 +68,11 @@ spec:
               value: "true"
           resources:
             requests:
-              cpu: 500m
-              memory: 2Gi
+              cpu: 100m
+              memory: 512Mi
             limits:
-              cpu: 2000m
-              memory: 4Gi
+              cpu: 500m
+              memory: 1Gi
           volumeMounts:
             - name: kafka-data
               mountPath: /var/lib/kafka/data
@@ -95,7 +95,7 @@ spec:
         name: kafka-data
       spec:
         accessModes: ["ReadWriteOnce"]
-        storageClassName: standard  # Use premium-rwo for SSD
+        storageClassName: standard-rwo
         resources:
           requests:
-            storage: 50Gi
+            storage: 20Gi

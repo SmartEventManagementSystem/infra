@@ -7,6 +7,11 @@ resources:
   - namespace.yaml
   - external-services.yaml
   - kafka-statefulset.yaml
+  - airflow.yaml
+  - flink.yaml
+  - openmetadata.yaml
+  - starrocks.yaml
+  - datalake.yaml
 
 commonLabels:
   app.kubernetes.io/part-of: ems-platform

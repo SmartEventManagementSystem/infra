@@ -1,0 +1,114 @@
+# StarRocks - OLAP Database (FE + BE)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starrocks-fe
+  namespace: dataplatform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: starrocks
+      component: fe
+  template:
+    metadata:
+      labels:
+        app: starrocks
+        component: fe
+    spec:
+      containers:
+        - name: fe
+          image: starrocks/fe-ubuntu:3.3.4
+          ports:
+            - name: query
+              containerPort: 9030
+            - name: http
+              containerPort: 8030
+            - name: rpc
+              containerPort: 9020
+          env:
+            - name: FE_CONFbergen_HOME
+              value: "/opt/starrocks/fe"
+            - name: FE_CONF_log_level
+              value: INFO
+            - name: FE_CONF_edit_log_port
+              value: "9011"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          readinessProbe:
+            tcpSocket:
+              port: 9030
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starrocks-be
+  namespace: dataplatform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: starrocks
+      component: be
+  template:
+    metadata:
+      labels:
+        app: starrocks
+        component: be
+    spec:
+      containers:
+        - name: be
+          image: starrocks/be-ubuntu:3.3.4
+          ports:
+            - name: be-thrift
+              containerPort: 9060
+            - name: be-http
+              containerPort: 8040
+            - name: be-heartbeat
+              containerPort: 9050
+          env:
+            - name: BE_CONF Bergen_HOME
+              value: "/opt/starrocks/be"
+            - name: BE_CONF_storage_volume_path
+              value: /opt/starrocks/storage
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          readinessProbe:
+            tcpSocket:
+              port: 9060
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          volumeMounts:
+            - name: storage
+              mountPath: /opt/starrocks/storage
+      volumes:
+        - name: storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: starrocks-fe
+  namespace: dataplatform
+spec:
+  type: ClusterIP
+  ports:
+    - name: query
+      port: 9030
+    - name: http
+      port: 8030
+  selector:
+    app: starrocks
+    component: fe
