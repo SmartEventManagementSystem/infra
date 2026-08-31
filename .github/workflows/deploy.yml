@@ -82,8 +82,12 @@ jobs:
       - name: Deploy ArgoCD
         run: |
           kubectl create namespace argocd || true
-          kubectl delete deployment -n argocd argocd-redis argocd-repo-server argocd-application-controller argocd-server --ignore-not-found=true
-          kubectl apply -n argocd -f argocd/bootstrap/argocd-install.yaml
+          curl -s https://raw.githubusercontent.com/argoproj/argo-cd/v2.13.3/manifests/install.yaml | \
+            sed 's|quay.io/argoproj/argocd:v2.13.3|asia-southeast1-docker.pkg.dev/${{ env.PROJECT_ID }}/argocd/argocd:v2.13.3|g' | \
+            sed 's|redis:7.4.0-alpine|asia-southeast1-docker.pkg.dev/${{ env.PROJECT_ID }}/argocd/redis:7.4.0-alpine|g' | \
+            sed 's|ghcr.io/dexidp/dex:v2.40.2|asia-southeast1-docker.pkg.dev/${{ env.PROJECT_ID }}/argocd/dex:v2.40.2|g' | \
+            kubectl apply -n argocd -f -
+          kubectl delete deployment argocd-dex-server -n argocd --ignore-not-found=true || true
 
       - name: Deploy ArgoCD Apps
         run: |
