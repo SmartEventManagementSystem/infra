@@ -15,6 +15,7 @@ permissions:
 
 env:
   PROJECT_ID: project-5ca79767-316d-4e68-a56
+  SA_EMAIL: github-actions-deploy@project-5ca79767-316d-4e68-a56.iam.gserviceaccount.com
 
 jobs:
   deploy:
@@ -66,6 +67,24 @@ jobs:
       - name: Configure Docker for GCR
         run: |
           gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
+
+      - name: Create GCR repository and grant permissions
+        run: |
+          gcloud artifacts repositories create argocd \
+            --repository-format=docker \
+            --location=asia-southeast1 \
+            --description="ArgoCD images" \
+            --project=${{ env.PROJECT_ID }} 2>/dev/null || true
+
+          gcloud artifacts repositories add-iam-policy-binding argocd \
+            --location=asia-southeast1 \
+            --project=${{ env.PROJECT_ID }} \
+            --member=serviceAccount:${{ env.SA_EMAIL }} \
+            --role=roles/artifactregistry.writer 2>/dev/null || true
+
+          gcloud projects add-iam-policy-binding ${{ env.PROJECT_ID }} \
+            --member=serviceAccount:${{ env.SA_EMAIL }} \
+            --role=roles/artifactregistry.writer 2>/dev/null || true
 
       - name: Pull and push ArgoCD images to GCR
         run: |
