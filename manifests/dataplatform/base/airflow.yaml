@@ -1,4 +1,4 @@
-# Apache Airflow with LocalExecutor
+# Apache Airflow with SequentialExecutor (for testing)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,14 +20,18 @@ spec:
         - name: airflow-webserver
           image: apache/airflow:2.10.1
           imagePullPolicy: IfNotPresent
+          command: ["bash", "-c"]
+          args:
+            - |
+              mkdir -p /opt/airflow && cd /opt/airflow
+              airflow db init || true
+              airflow webserver
           ports:
             - name: webserver
               containerPort: 8080
           env:
             - name: AIRFLOW__CORE__EXECUTOR
-              value: LocalExecutor
-            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-              value: "postgresql+psycopg2://emsuser:changeme@postgres:5432/ems_events"
+              value: SequentialExecutor
             - name: AIRFLOW__CORE__FERNET_KEY
               value: "D7Gh3T8kL2mN5pQ7rS1uX4yB6cE9fH0jK2mN5pQ="
             - name: AIRFLOW__CORE__LOAD_EXAMPLES
@@ -39,12 +43,6 @@ spec:
             limits:
               cpu: 500m
               memory: 1Gi
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 30
-            periodSeconds: 10
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -70,39 +68,7 @@ spec:
           command: ["airflow", "scheduler"]
           env:
             - name: AIRFLOW__CORE__EXECUTOR
-              value: LocalExecutor
-            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-              value: "postgresql+psycopg2://emsuser:changeme@postgres:5432/ems_events"
-          resources:
-            requests:
-              cpu: 250m
-              memory: 512Mi
-            limits:
-              cpu: 500m
-              memory: 1Gi
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: airflow-triggerer
-  namespace: dataplatform
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: airflow
-      component: triggerer
-  template:
-    metadata:
-      labels:
-        app: airflow
-        component: triggerer
-    spec:
-      containers:
-        - name: airflow-triggerer
-          image: apache/airflow:2.10.1
-          imagePullPolicy: IfNotPresent
-          command: ["airflow", "triggerer"]
+              value: SequentialExecutor
           resources:
             requests:
               cpu: 250m
