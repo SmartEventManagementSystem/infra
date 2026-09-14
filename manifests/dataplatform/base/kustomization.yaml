@@ -9,9 +9,9 @@ resources:
   - kafka-statefulset.yaml
   - airflow.yaml
   - flink.yaml
-  # - openmetadata.yaml  # TODO: re-enable when dependencies fixed
+  - openmetadata.yaml
   - starrocks.yaml
-  # - datalake.yaml  # TODO: re-enable when minio AMD64 image available
+  - datalake.yaml
 
 commonLabels:
   app.kubernetes.io/part-of: ems-platform

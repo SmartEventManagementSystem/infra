@@ -77,8 +77,8 @@ spec:
       terminationGracePeriodSeconds: 300
       containers:
         - name: controller
-          image: registry.k8s.io/ingress-nginx/controller:v1.11.5
-          imagePullPolicy: Always
+          image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/ingress-nginx/controller:v1.11.2-amd64-v2
+          imagePullPolicy: IfNotPresent
           lifecycle:
             preStop:
               exec:
@@ -154,3 +154,22 @@ spec:
         - name: webhook-cert
           secret:
             secretName: ingress-nginx-admission
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-nginx-controller
+  namespace: ingress-nginx
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+    - name: https
+      port: 443
+      targetPort: 443
+  selector:
+    app: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/component: controller
