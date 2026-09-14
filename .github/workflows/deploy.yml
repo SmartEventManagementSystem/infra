@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 env:
   PROJECT_ID: project-5ca79767-316d-4e68-a56
