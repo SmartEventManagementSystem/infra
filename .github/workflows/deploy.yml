@@ -70,7 +70,8 @@ jobs:
 
       - name: Deploy Data Platform
         run: |
-          kubectl delete deployment airflow-scheduler airflow-webserver minio starrocks-fe starrocks-be -n dataplatform --ignore-not-found=true || true
+          kubectl delete deployment --all -n dataplatform --ignore-not-found=true || true
+          kubectl delete statefulset --all -n dataplatform --ignore-not-found=true || true
           kubectl apply -k manifests/dataplatform/base/
 
       - name: Configure Docker for GCR
