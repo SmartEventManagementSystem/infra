@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
         - name: minio
-          image: minio/minio:latest
+          image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/minio:latest
+          imagePullPolicy: IfNotPresent
           args: ["server", "/data", "--console-address", ":9001"]
           ports:
             - name: api
