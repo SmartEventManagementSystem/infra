@@ -4,6 +4,9 @@ kind: Deployment
 metadata:
   name: starrocks-fe
   namespace: dataplatform
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: ems-platform
 spec:
   replicas: 1
   selector:
@@ -15,6 +18,8 @@ spec:
       labels:
         app: starrocks
         component: fe
+        app.kubernetes.io/managed-by: argocd
+        app.kubernetes.io/part-of: ems-platform
     spec:
       containers:
         - name: fe
@@ -42,20 +47,23 @@ spec:
           readinessProbe:
             tcpSocket:
               port: 8030
-            initialDelaySeconds: 120
-            periodSeconds: 10
-            failureThreshold: 30
+            initialDelaySeconds: 300
+            periodSeconds: 30
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 8030
-            initialDelaySeconds: 180
-            periodSeconds: 20
+            initialDelaySeconds: 600
+            periodSeconds: 30
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: starrocks-be
   namespace: dataplatform
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: ems-platform
 spec:
   replicas: 1
   selector:
@@ -67,6 +75,8 @@ spec:
       labels:
         app: starrocks
         component: be
+        app.kubernetes.io/managed-by: argocd
+        app.kubernetes.io/part-of: ems-platform
     spec:
       containers:
         - name: be

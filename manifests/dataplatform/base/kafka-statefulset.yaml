@@ -65,13 +65,11 @@ spec:
             - name: kafka-data
               mountPath: /var/lib/kafka/data
           readinessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
-            initialDelaySeconds: 30
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 60
             periodSeconds: 10
+            failureThreshold: 30
           livenessProbe:
             tcpSocket:
               port: 9092
