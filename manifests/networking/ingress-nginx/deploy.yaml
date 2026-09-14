@@ -77,7 +77,7 @@ spec:
       terminationGracePeriodSeconds: 300
       containers:
         - name: controller
-          image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/ingress-nginx/controller:v1.11.2
+          image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/ingress-nginx/controller:v1.11.2-amd64
           imagePullPolicy: IfNotPresent
           lifecycle:
             preStop:
