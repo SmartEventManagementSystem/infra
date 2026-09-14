@@ -51,13 +51,13 @@ if [ -z "$1" ] || [ "$1" == "all" ]; then
     # Data Platform
     forward elasticsearch 19200 9200 dataplatform
     forward kafka 19092 9092 dataplatform
-    forward kafka 19093 9093 dataplatform  # Kafka internal
     forward debezium-connect 18083 8083 dataplatform
-    forward starrocks-fe 19030 9030 dataplatform
+    forward debezium-ui 18084 8080 dataplatform
     forward starrocks-fe 18030 8030 dataplatform
+    forward starrocks-fe 19030 9030 dataplatform
     forward airflow-webserver 18081 8080 dataplatform
     forward flink-jobmanager 18082 8081 dataplatform
-    forward kafka-ui 18084 8080 dataplatform
+    forward kafka-ui 18085 8080 dataplatform
     
 else
     case "$1" in
@@ -73,21 +73,23 @@ else
             ;;
         kafka)
             forward kafka 19092 9092 dataplatform
-            forward kafka 19093 9093 dataplatform
             ;;
         debezium|cdc)
             forward debezium-connect 18083 8083 dataplatform
+            forward debezium-ui 18084 8080 dataplatform
             ;;
         starrocks|sr)
-            forward starrocks-fe 19030 9030 dataplatform
             forward starrocks-fe 18030 8030 dataplatform
+            forward starrocks-fe 19030 9030 dataplatform
             ;;
         airflow|af)
             forward airflow-webserver 18081 8080 dataplatform
             ;;
         flink)
             forward flink-jobmanager 18082 8081 dataplatform
-    forward kafka-ui 18084 8080 dataplatform
+            ;;
+        kafka-ui)
+            forward kafka-ui 18085 8080 dataplatform
             ;;
         *)
             echo "Unknown service: $1"
@@ -103,12 +105,12 @@ echo "  argocd         : localhost:18080"
 echo "  spark          : localhost:17080, 17077"
 echo "  elasticsearch  : localhost:19200"
 echo "  kafka          : localhost:19092"
-echo "  kafka-internal : localhost:19093"
+echo "  kafka-ui       : localhost:18085"
 echo "  debezium       : localhost:18083"
-echo "  starrocks      : localhost:19030, 18030"
+echo "  debezium-ui    : localhost:18084"
+echo "  starrocks      : localhost:18030 (UI), 19030 (SQL)"
 echo "  airflow        : localhost:18081"
 echo "  flink          : localhost:18082"
-    echo "  kafka-ui       : localhost:18084"
 echo "=========================================="
 echo ""
 echo "Press Ctrl+C to stop all forwards"

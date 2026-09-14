@@ -30,13 +30,24 @@ spec:
               export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
               export PATH=$JAVA_HOME/bin:$PATH
               export JAVA_OPTS="-Xmx2g -Xms1g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
-              /opt/starrocks/fe/bin/start_fe.sh --daemon
-              tail -f /dev/null
+              # Create directories in /tmp and symlink
+              rm -rf /tmp/meta /tmp/log
+              mkdir -p /tmp/meta /tmp/log
+              rm -rf /opt/starrocks/fe/meta /opt/starrocks/fe/log
+              ln -s /tmp/meta /opt/starrocks/fe/meta
+              ln -s /tmp/log /opt/starrocks/fe/log
+              cd /opt/starrocks/fe
+              bin/start_fe.sh --daemon
+              # Keep container alive
+              sleep infinity
           ports:
             - name: query
               containerPort: 9030
             - name: http
               containerPort: 8030
+          volumeMounts:
+            - name: meta
+              mountPath: /opt/starrocks/fe/meta
           resources:
             requests:
               cpu: 250m
@@ -44,17 +55,11 @@ spec:
             limits:
               cpu: 1000m
               memory: 2Gi
-          readinessProbe:
-            tcpSocket:
-              port: 8030
-            initialDelaySeconds: 300
-            periodSeconds: 30
-            failureThreshold: 10
-          livenessProbe:
-            tcpSocket:
-              port: 8030
-            initialDelaySeconds: 600
-            periodSeconds: 30
+      volumes:
+        - name: meta
+          hostPath:
+            path: /mnt/disks/starrocks-meta
+            type: DirectoryOrCreate
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -96,6 +101,9 @@ spec:
               containerPort: 8040
             - name: be-heartbeat
               containerPort: 9050
+          volumeMounts:
+            - name: storage
+              mountPath: /opt/starrocks/storage
           resources:
             requests:
               cpu: 500m
@@ -103,19 +111,6 @@ spec:
             limits:
               cpu: 2000m
               memory: 4Gi
-          readinessProbe:
-            tcpSocket:
-              port: 8040
-            initialDelaySeconds: 60
-            periodSeconds: 10
-          livenessProbe:
-            tcpSocket:
-              port: 8040
-            initialDelaySeconds: 120
-            periodSeconds: 20
-          volumeMounts:
-            - name: storage
-              mountPath: /opt/starrocks/storage
       volumes:
         - name: storage
           emptyDir: {}

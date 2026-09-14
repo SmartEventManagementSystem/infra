@@ -1,0 +1,25 @@
+# PVC for StarRocks FE meta storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: starrocks-fe-meta
+  namespace: dataplatform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# PVC for StarRocks BE storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: starrocks-be-storage
+  namespace: dataplatform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi

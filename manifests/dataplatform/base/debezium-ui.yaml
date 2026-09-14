@@ -1,0 +1,45 @@
+# Debezium UI - Web interface for CDC management
+apiVersion: v1
+kind: Service
+metadata:
+  name: debezium-ui
+  namespace: dataplatform
+spec:
+  selector:
+    app: debezium-ui
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debezium-ui
+  namespace: dataplatform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debezium-ui
+  template:
+    metadata:
+      labels:
+        app: debezium-ui
+    spec:
+      containers:
+        - name: debezium-ui
+          image: debezium/debezium-ui:latest
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: KAFKA_CONNECT_URI
+              value: "http://debezium-connect.dataplatform.svc.cluster.local:8083"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
