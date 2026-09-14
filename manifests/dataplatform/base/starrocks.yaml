@@ -24,6 +24,7 @@ spec:
             - |
               export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
               export PATH=$JAVA_HOME/bin:$PATH
+              export JAVA_OPTS="-Xmx2g -Xms1g -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
               /opt/starrocks/fe/bin/start_fe.sh --daemon
               tail -f /dev/null
           ports:
@@ -37,7 +38,7 @@ spec:
               memory: 512Mi
             limits:
               cpu: 1000m
-              memory: 1Gi
+              memory: 2Gi
           readinessProbe:
             tcpSocket:
               port: 8030
@@ -74,6 +75,7 @@ spec:
             - |
               export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
               export PATH=$JAVA_HOME/bin:$PATH
+              export JAVA_OPTS="-Xmx2g -Xms512m"
               /opt/starrocks/be/bin/start_be.sh --daemon
               tail -f /dev/null
           ports:
@@ -85,11 +87,11 @@ spec:
               containerPort: 9050
           resources:
             requests:
-              cpu: 250m
-              memory: 512Mi
+              cpu: 500m
+              memory: 1Gi
             limits:
-              cpu: 1000m
-              memory: 2Gi
+              cpu: 2000m
+              memory: 4Gi
           readinessProbe:
             tcpSocket:
               port: 8040

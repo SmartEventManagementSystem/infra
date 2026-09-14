@@ -23,7 +23,7 @@ spec:
           command: ["bash", "-c"]
           args:
             - |
-              mkdir -p /opt/airflow && cd /opt/airflow
+              mkdir -p /opt/airflow
               airflow db init || true
               airflow webserver
           ports:
@@ -65,7 +65,12 @@ spec:
         - name: airflow-scheduler
           image: apache/airflow:2.10.1
           imagePullPolicy: IfNotPresent
-          command: ["airflow", "scheduler"]
+          command: ["bash", "-c"]
+          args:
+            - |
+              mkdir -p /opt/airflow
+              airflow db init || true
+              airflow scheduler
           env:
             - name: AIRFLOW__CORE__EXECUTOR
               value: SequentialExecutor
