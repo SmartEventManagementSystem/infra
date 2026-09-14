@@ -55,9 +55,10 @@ jobs:
 
       - name: Deploy cert-manager
         run: |
+          kubectl delete deployment cert-manager cert-manager-cainjector cert-manager-webhook -n cert-manager --ignore-not-found=true || true
           kubectl apply -f manifests/networking/cert-manager/namespace.yaml
           kubectl apply -f manifests/networking/cert-manager/cert-manager.yaml
-          sleep 10
+          sleep 15
           kubectl apply -f manifests/networking/cert-manager/issuers.yaml || true
 
       - name: Deploy Ingress Nginx
