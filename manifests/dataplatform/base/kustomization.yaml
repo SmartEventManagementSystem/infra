@@ -11,8 +11,9 @@ resources:
   - airflow.yaml
   - flink.yaml
   - starrocks.yaml
-  - datalake.yaml
-  - debezium.yaml
+  # TODO: re-enable when AMD64 images available
+  # - datalake.yaml
+  # - debezium.yaml
 
 commonLabels:
   app.kubernetes.io/part-of: ems-platform
