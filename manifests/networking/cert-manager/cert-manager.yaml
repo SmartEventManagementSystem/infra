@@ -44,27 +44,34 @@ metadata:
   name: cert-manager
   namespace: cert-manager
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: cert-manager
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/instance: cert-manager
+      app.kubernetes.io/name: cert-manager
   template:
     metadata:
       labels:
-        app: cert-manager
+        app.kubernetes.io/component: controller
+        app.kubernetes.io/instance: cert-manager
+        app.kubernetes.io/name: cert-manager
+        app.kubernetes.io/version: v1.15.3
     spec:
       serviceAccountName: cert-manager
       containers:
-        - name: cert-manager
-          image: quay.io/jetstack/cert-manager-controller:v1.15.3
-          imagePullPolicy: Always
+        - name: cert-manager-controller
+          image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/cert-manager/controller:v1.15.3-amd64-fix
+          imagePullPolicy: IfNotPresent
           args:
             - --v=2
             - --cluster-resource-namespace=$(POD_NAMESPACE)
-            - --leader-election-namespace=cert-manager
+            - --leader-election-namespace=kube-system
           ports:
             - containerPort: 9402
               name: http-prometheus
+            - containerPort: 9403
+              name: http-healthz
           resources:
             requests:
               cpu: 10m
@@ -80,7 +87,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /livez
-              port: 6080
+              port: 9403
             initialDelaySeconds: 10
             periodSeconds: 10
 ---
@@ -90,23 +97,28 @@ metadata:
   name: cert-manager-cainjector
   namespace: cert-manager
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: cert-manager-cainjector
+      app.kubernetes.io/component: cainjector
+      app.kubernetes.io/instance: cert-manager
+      app.kubernetes.io/name: cert-manager
   template:
     metadata:
       labels:
-        app: cert-manager-cainjector
+        app.kubernetes.io/component: cainjector
+        app.kubernetes.io/instance: cert-manager
+        app.kubernetes.io/name: cert-manager
+        app.kubernetes.io/version: v1.15.3
     spec:
       serviceAccountName: cert-manager
       containers:
-        - name: cainjector
-          image: quay.io/jetstack/cert-manager-cainjector:v1.15.3
-          imagePullPolicy: Always
+        - name: cert-manager-cainjector
+          image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/cert-manager/cainjector:v1.15.3-amd64
+          imagePullPolicy: IfNotPresent
           args:
             - --v=2
-            - --cluster-resource-namespace=$(POD_NAMESPACE)
+            - --leader-election-namespace=kube-system
           resources:
             requests:
               cpu: 10m
@@ -126,23 +138,33 @@ metadata:
   name: cert-manager-webhook
   namespace: cert-manager
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: cert-manager-webhook
+      app.kubernetes.io/component: webhook
+      app.kubernetes.io/instance: cert-manager
+      app.kubernetes.io/name: cert-manager
   template:
     metadata:
       labels:
-        app: cert-manager-webhook
+        app.kubernetes.io/component: webhook
+        app.kubernetes.io/instance: cert-manager
+        app.kubernetes.io/name: cert-manager
+        app.kubernetes.io/version: v1.15.3
     spec:
-      serviceAccountName: cert-manager
+      serviceAccountName: cert-manager-webhook
       containers:
-        - name: webhook
-          image: quay.io/jetstack/cert-manager-webhook:v1.15.3
-          imagePullPolicy: Always
+        - name: cert-manager-webhook
+          image: asia-southeast1-docker.pkg.dev/project-5ca79767-316d-4e68-a56/argocd/cert-manager/webhook:v1.15.3-amd64-v3
+          imagePullPolicy: IfNotPresent
           args:
             - --v=2
-            - --secure-port=6443
+            - --secure-port=10250
+            - --dynamic-serving-ca-secret-namespace=$(POD_NAMESPACE)
+            - --dynamic-serving-ca-secret-name=cert-manager-webhook-ca
+            - --dynamic-serving-dns-names=cert-manager-webhook
+            - --dynamic-serving-dns-names=cert-manager-webhook.$(POD_NAMESPACE)
+            - --dynamic-serving-dns-names=cert-manager-webhook.$(POD_NAMESPACE).svc
           resources:
             requests:
               cpu: 10m
@@ -151,11 +173,18 @@ spec:
               cpu: 200m
               memory: 256Mi
           ports:
-            - containerPort: 6443
+            - containerPort: 10250
               name: https
+            - containerPort: 6080
+              name: healthcheck
           readinessProbe:
             httpGet:
               path: /healthz
               port: 6080
             initialDelaySeconds: 5
             periodSeconds: 5
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
