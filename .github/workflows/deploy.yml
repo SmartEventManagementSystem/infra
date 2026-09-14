@@ -63,6 +63,7 @@ jobs:
 
       - name: Deploy Ingress Nginx
         run: |
+          kubectl delete deployment ingress-nginx-controller -n ingress-nginx --ignore-not-found=true || true
           kubectl apply -f manifests/networking/ingress-nginx/ingressclass.yaml
           kubectl apply -f manifests/networking/ingress-nginx/deploy.yaml
           kubectl apply -f manifests/networking/ingress-nginx/svc.yaml
