@@ -1,7 +1,78 @@
 #!/bin/bash
 
-# Cleanup
+# ============================================
+# EMS Platform Port Forward Script
+# ============================================
+#
+# CREDENTIALS & ACCESS INFO:
+#
+# ARGOCD
+#   URL: http://localhost:18080
+#   Username: admin
+#   Password: YJ5zTqFY8QdZX1uP
+#
+# AIRFLOW
+#   URL: http://localhost:18081
+#   Username: admin
+#   Password: admin123
+#
+# ELASTICSEARCH
+#   URL: http://localhost:19200
+#   No authentication required
+#
+# KAFKA
+#   URL: localhost:19092
+#   Use Kafka UI (localhost:18085) or Kafka CLI
+#
+# KAFKA UI
+#   URL: http://localhost:18085
+#   No authentication required
+#
+# DEBEZIUM CONNECT
+#   URL: http://localhost:18083
+#   REST API for CDC connectors
+#
+# DEBEZIUM UI
+#   URL: http://localhost:18084
+#   No authentication required
+#
+# FLINK
+#   URL: http://localhost:18082
+#   No authentication required
+#
+# SPARK
+#   URL: http://localhost:17080
+#   No authentication required
+#
+# MYSQL
+#   Host: localhost:13306
+#   Username: root
+#   Password: mysqlroot123
+#   Database: ems
+#   Connect: mysql -h localhost -P 13306 -u root -p
+#
+# POSTGRESQL
+#   Host: localhost:15432
+#   Username: postgres
+#   Password: postgres123
+#   Database: ems
+#   Connect: psql -h localhost -p 15432 -U postgres -d ems
+#
+# GCP BIGQUERY
+#   Project: project-5ca79767-316d-4e68-a56
+#   Region: asia-southeast1
+#   Dataset: ems_analytics
+#
+# GCP BIGTABLE
+#   Instance: ems-nosql
+#   Cluster: ems-nosql-cluster
+#   Zone: asia-southeast1-b
+#
+# ============================================
+
+# Cleanup on exit
 cleanup() {
+    echo ""
     echo "Stopping port forwards..."
     pkill -f "kubectl port-forward" 2>/dev/null
     exit 0
