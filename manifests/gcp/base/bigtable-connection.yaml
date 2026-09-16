@@ -1,0 +1,14 @@
+# BigTable (HBase API) Configuration
+# Use GCP BigTable for NoSQL/Time-series data
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bigtable-config
+  namespace: dataplatform
+data:
+  GCP_PROJECT_ID: "ems-datalake-441611"
+  GCP_REGION: "asia-southeast1"
+  BIGTABLE_INSTANCE: "ems-nosql"
+  # Instance already exists in GCP
+  BIGTABLE_CLUSTER: "ems-nosql-cluster"
+  BIGTABLE_ZONE: "asia-southeast1-b"

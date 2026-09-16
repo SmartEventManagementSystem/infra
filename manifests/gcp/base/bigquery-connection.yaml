@@ -1,0 +1,13 @@
+# BigQuery Connection Configuration
+# Use GCP BigQuery as OLAP/Data Warehouse solution
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bigquery-config
+  namespace: dataplatform
+data:
+  GCP_PROJECT_ID: "ems-datalake-441611"
+  GCP_REGION: "asia-southeast1"
+  # BigQuery dataset for analytics
+  BIGQUERY_DATASET: "ems_analytics"
+  # Connection will use Workload Identity / Service Account

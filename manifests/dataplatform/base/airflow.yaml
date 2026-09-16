@@ -25,9 +25,11 @@ spec:
             - |
               mkdir -p /opt/airflow
               export AIRFLOW__CORE__SQL_ALCHEMY_CONN="sqlite:////opt/airflow/airflow.db"
+              export AIRFLOW__WEBSERVER__WORKER_PRECHECK_IMPORT=true
               airflow db migrate || true
               airflow connections create-default-connections || true
-              airflow users create --username admin --password admin123 --firstname Admin --lastname User --role Admin --email admin@example.com 2>/dev/null || echo "User may already exist"
+              airflow users create --username admin --password admin123 --firstname Admin --lastname User --role Admin --email admin@example.com 2>/dev/null || echo "User exists"
+              sleep 5
               airflow webserver --port 8080
           ports:
             - name: webserver
@@ -36,7 +38,7 @@ spec:
             - name: AIRFLOW__CORE__EXECUTOR
               value: SequentialExecutor
             - name: AIRFLOW__CORE__FERNET_KEY
-              value: "ZThiOTBjMDAtMzg1OC00YjJiLTkzOTMtMGI2MjJjZmFhZDEy"
+              value: ""
             - name: AIRFLOW__CORE__LOAD_EXAMPLES
               value: "false"
             - name: AIRFLOW__WEBSERVER__WEB_SERVER_WEB_SERVER_HOST
