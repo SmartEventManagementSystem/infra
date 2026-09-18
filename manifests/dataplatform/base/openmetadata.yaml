@@ -9,6 +9,11 @@ spec:
   selector:
     matchLabels:
       app: openmetadata
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
@@ -16,7 +21,7 @@ spec:
     spec:
       containers:
         - name: openmetadata-server
-          image: openmetadata/server:1.0.4
+          image: openmetadata/server:2.1.0
           ports:
             - name: http
               containerPort: 8585
@@ -24,46 +29,28 @@ spec:
             - name: SERVER_PORT
               value: "8585"
             - name: DB_HOST
-              value: "$(POSTGRES_HOST)"
+              value: "mysql.dataplatform.svc.cluster.local"
             - name: DB_PORT
-              value: "5432"
+              value: "3306"
             - name: DB_SCHEME
-              value: "postgresql"
+              value: "mysql"
             - name: DB_USER
-              valueFrom:
-                secretKeyRef:
-                  name: dataplatform-secrets
-                  key: om-db-user
-                  optional: true
+              value: "root"
             - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: dataplatform-secrets
-                  key: om-db-password
-                  optional: true
-            - name: AIRFLOW_HOST
-              value: "airflow-webserver.dataplatform.svc.cluster.local"
-            - name: AIRFLOW_PORT
-              value: "8080"
+              value: "mysqlroot123"
+            - name: DB_DATABASE
+              value: "openmetadata_db"
+            - name: ELASTICSEARCH_HOST
+              value: "elasticsearch.dataplatform.svc.cluster.local"
+            - name: ELASTICSEARCH_PORT
+              value: "9200"
           resources:
             requests:
-              cpu: 250m
+              cpu: 100m
               memory: 512Mi
             limits:
-              cpu: 500m
-              memory: 1Gi
-          readinessProbe:
-            httpGet:
-              path: /api/v1/version
-              port: 8585
-            initialDelaySeconds: 60
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /api/v1/version
-              port: 8585
-            initialDelaySeconds: 120
-            periodSeconds: 20
+              cpu: 1
+              memory: 2Gi
 ---
 apiVersion: v1
 kind: Service
